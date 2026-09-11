@@ -13,9 +13,17 @@ Run with:
 
 import math
 import re
-import statistics
+import sys
 import time
-from pathlib import Path
+
+# Windows consoles default to cp1252, which cannot encode the box-drawing
+# characters used in the output tables. Force UTF-8 so `python
+# baselines/python_naive.py` works as documented on every platform.
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, OSError):  # pragma: no cover - exotic stdout
+        pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
