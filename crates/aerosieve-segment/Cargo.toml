@@ -1,0 +1,19 @@
+[package]
+name = "aerosieve-segment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Hysteresis VAD segmentation producing variable-length speech clips"
+
+[features]
+default = []
+silero = ["dep:ort"]
+
+[dependencies]
+aerosieve-acoustic.workspace = true
+thiserror.workspace = true
+ort = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest.workspace = true
+criterion.workspace = true
