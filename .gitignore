@@ -4,5 +4,6 @@
 !/data/staging/.gitkeep
 /data/clean/*
 !/data/clean/.gitkeep
-/docs
+/docs/*
+!/docs/superpowers/
 /.cargo/
