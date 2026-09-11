@@ -1,0 +1,15 @@
+[package]
+name = "aerosieve-decode"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Audio decoding, resampling, and loudness standardization for AeroSieve"
+
+[dependencies]
+symphonia.workspace = true
+rubato.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+hound.workspace = true
+criterion.workspace = true

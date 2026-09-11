@@ -3,11 +3,13 @@ name = "aerosieve-acoustic"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Deterministic acoustic quality scoring: WADA-SNR, clipping, dBFS, spectral flatness"
 
 [dependencies]
+serde.workspace = true
 
 [dev-dependencies]
-criterion = "0.5"
+criterion.workspace = true
 
 [[bench]]
 name = "acoustic_benchmark"
