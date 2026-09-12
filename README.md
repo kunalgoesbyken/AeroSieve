@@ -117,7 +117,7 @@ The honest comparison is that AeroSieve does strictly more work per clip (real S
 
 ```bash
 cargo build --release
-cargo test --workspace          # 144 tests
+cargo test --workspace          # 144 tests (152 with --features silero on MSVC)
 cargo run --release --example basic
 cargo bench --bench pipeline_benchmark
 ```
@@ -156,7 +156,15 @@ Output lands in `data/clean` as `shard-000000.tar` (paired `{key}.wav` + `{key}.
 
 ## Design decisions
 
-**Deterministic DSP by default, ML opt-in.** The default build has no ONNX dependency and runs on any toolchain. Silero VAD ([87% accuracy on noisy audio vs. WebRTC's 58%](https://github.com/Anwarvic/VAD_Benchmark)) is available behind `--features silero`, which requires an MSVC toolchain on Windows because `ort` ships no prebuilt ONNX Runtime for `windows-gnu`.
+**Deterministic DSP by default, ML opt-in.** The default build has no ONNX dependency and runs on any toolchain. Silero VAD ([87% accuracy on noisy audio vs. WebRTC's 58%](https://github.com/Anwarvic/VAD_Benchmark)) is available behind `--features silero`, which requires an MSVC toolchain on Windows because `ort` ships no prebuilt ONNX Runtime for `windows-gnu`:
+
+```bash
+curl -sL -o models/silero_vad.onnx \
+  https://raw.githubusercontent.com/snakers4/silero-vad/master/src/silero_vad/data/silero_vad.onnx
+cargo +stable-x86_64-pc-windows-msvc test -p aerosieve-segment --features silero
+```
+
+Worth knowing before you reach for it: Silero is trained on real speech and scores *synthetic* audio at ~0.001 regardless of what you feed it — DC, white noise, a 200 Hz sine, and a synthetic vowel all come back as "not speech". That is correct behaviour, but it means the synthetic fixtures this repo tests with are useless for exercising it. The live tests therefore assert what is verifiable without a real recording: that probabilities vary with input, and that the recurrent state is genuinely threaded between calls.
 
 **Segments, not frames.** Real VAD is a hysteresis state machine — separate enter (0.5) and exit (0.35) thresholds, `min_speech_duration_ms` 250, `min_silence_duration_ms` 100, `speech_pad_ms` 30 — emitting variable-length clips. These are Silero's documented defaults. A per-frame boolean can't express "a 40 ms dip mid-word is not the end of an utterance."
 
@@ -172,7 +180,9 @@ Output lands in `data/clean` as `shard-000000.tar` (paired `{key}.wav` + `{key}.
 
 **Implemented:** file ingestion (wav, mp3, flac, ogg, mp4, aac), resampling, loudness normalization, VAD segmentation, quality scoring and filtering, transcript normalization, WebDataset output with atomic commit.
 
-**Not implemented**, and not claimed: source separation, speaker diarization, ASR (transcripts are accepted, not generated), real-time streaming, microphone and TCP sources, GPU execution. The `silero` module is written against the `ort` 2.0 API but **has never been compiled** — it cannot be on this repo's default toolchain.
+**Optional:** Silero VAD behind `--features silero`. Compiled and tested against the real model on the MSVC toolchain — 8 live inference tests covering model loading, sample-rate validation, probability bounds, input sensitivity, recurrent-state threading, and reset semantics. Not built by default.
+
+**Not implemented**, and not claimed: source separation, speaker diarization, ASR (transcripts are accepted, not generated), real-time streaming, microphone and TCP sources, GPU execution.
 
 Design notes and the research behind these choices are in [`docs/superpowers/`](./docs/superpowers/).
 

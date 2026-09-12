@@ -7,3 +7,5 @@
 /docs/*
 !/docs/superpowers/
 /.cargo/
+/models/*
+!/models/README.md

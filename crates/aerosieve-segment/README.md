@@ -167,6 +167,28 @@ let detector = SileroDetector::from_model_path(Path::new("silero_vad.onnx"), 16_
 > anyone who clones the repo. ML is a genuine opt-in upgrade, not a hard
 > dependency.
 
+**Verification status:** compiled and run against the real model on
+`stable-x86_64-pc-windows-msvc`. `tests/silero_inference.rs` holds 8 live
+inference tests — model loading, sample-rate validation, probability bounds,
+input sensitivity, recurrent-state threading, and reset semantics. They skip
+themselves when `models/silero_vad.onnx` is absent, so a checkout without the
+weights still passes.
+
+```bash
+curl -sL -o models/silero_vad.onnx \
+  https://raw.githubusercontent.com/snakers4/silero-vad/master/src/silero_vad/data/silero_vad.onnx
+cargo +stable-x86_64-pc-windows-msvc test -p aerosieve-segment --features silero
+```
+
+**Silero and synthetic audio.** Measured against the real model, every synthetic
+signal scores ~0.001: DC, white noise, a 200 Hz sine, and a synthetic vowel are
+all "not speech". That is the model behaving correctly — it was trained to
+separate real speech from everything else — but it means synthetic fixtures
+cannot exercise its decision boundary. The live tests therefore assert what *is*
+verifiable without a recording: probabilities vary with input (a broken tensor
+binding would return a constant), and the `stateN` output is genuinely fed back
+as the next call's `state`. Use `EnergyDetector` for tests on generated audio.
+
 ## Usage
 
 ```rust

@@ -12,8 +12,10 @@ use ort::value::Tensor;
 use crate::detector::{SILERO_WINDOW_8K, SILERO_WINDOW_16K, SpeechDetector};
 use crate::error::SegmentError;
 
-/// Size of the Silero LSTM state tensor: `[2, 1, 128]`.
-const STATE_LEN: usize = 2 * 1 * 128;
+/// Shape of the Silero recurrent state tensor.
+const STATE_SHAPE: [usize; 3] = [2, 1, 128];
+/// Flattened length of [`STATE_SHAPE`].
+const STATE_LEN: usize = STATE_SHAPE[0] * STATE_SHAPE[1] * STATE_SHAPE[2];
 
 /// Silero VAD v5 via ONNX Runtime.
 ///
@@ -90,7 +92,7 @@ impl SileroDetector {
             .map_err(|e| SegmentError::Onnx(e.to_string()))?;
         let sr = Tensor::from_array(([1usize], vec![self.sample_rate]))
             .map_err(|e| SegmentError::Onnx(e.to_string()))?;
-        let state = Tensor::from_array(([2usize, 1usize, 128usize], self.state.clone()))
+        let state = Tensor::from_array((STATE_SHAPE, self.state.clone()))
             .map_err(|e| SegmentError::Onnx(e.to_string()))?;
 
         let outputs = self
