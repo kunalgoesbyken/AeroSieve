@@ -275,7 +275,7 @@ impl Pipeline {
                     meta.metrics = serde_json::to_value(metrics)
                         .unwrap_or(serde_json::Value::Null);
 
-                    self.writer.write_sample(clip, &mut meta)?;
+                    self.writer.write_sample(clip, &meta)?;
                     self.stats.segments_accepted += 1;
                     self.stats.accepted_duration_s += duration_s as f64;
                 }
@@ -441,7 +441,7 @@ mod tests {
         let mut rules = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         rules.push("../aerosieve-lexical/rules/default.yaml");
 
-        let mut p = Pipeline::new(config(&base).with_rules(rules)).unwrap();
+        let p = Pipeline::new(config(&base).with_rules(rules)).unwrap();
         assert_eq!(p.normalize("yeh \u{20B9}500 hai"), "yeh 500 rupaye hai");
 
         let _ = p.finish();

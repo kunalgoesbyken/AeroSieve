@@ -257,8 +257,8 @@ fn bench_stages(c: &mut Criterion) {
                 (dir, w)
             },
             |(dir, mut w)| {
-                let mut meta = SampleMeta::new("k", 5.0, SAMPLE_RATE);
-                w.write_sample(&clip, &mut meta).expect("write");
+                let meta = SampleMeta::new("k", 5.0, SAMPLE_RATE);
+                w.write_sample(&clip, &meta).expect("write");
                 let _ = w.finish();
                 let _ = std::fs::remove_dir_all(&dir);
             },
@@ -316,7 +316,7 @@ fn report_filter_behaviour(_c: &mut Criterion) {
         let m = score(&samples);
         let verdict = match policy.evaluate(&m) {
             None => "accept".to_string(),
-            Some(r) => format!("{}", r.as_str()),
+            Some(r) => r.as_str().to_string(),
         };
         println!(
             "  {:<24} {:>8.1} {:>8.1} {:>9.4} {:>12}",

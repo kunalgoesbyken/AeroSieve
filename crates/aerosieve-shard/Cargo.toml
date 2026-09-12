@@ -6,7 +6,6 @@ license.workspace = true
 description = "WebDataset tar shard writer with atomic commit semantics"
 
 [dependencies]
-aerosieve-sink.workspace = true
 tar.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -10,7 +10,6 @@ default = []
 silero = ["aerosieve-segment/silero"]
 
 [dependencies]
-aerosieve-ring.workspace = true
 aerosieve-acoustic.workspace = true
 aerosieve-decode.workspace = true
 aerosieve-segment.workspace = true

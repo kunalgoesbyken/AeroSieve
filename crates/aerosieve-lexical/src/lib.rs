@@ -399,7 +399,7 @@ fn extract_keyword(pattern: &str) -> Option<String> {
     fn consider(run: &mut String, best: &mut Option<String>) {
         if run.chars().count() >= 3 {
             let lower = run.to_lowercase();
-            if best.as_ref().map_or(true, |b| lower.len() > b.len()) {
+            if best.as_ref().is_none_or(|b| lower.len() > b.len()) {
                 *best = Some(lower);
             }
         }

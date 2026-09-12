@@ -38,9 +38,15 @@ pub const CLIP_THRESHOLD: f32 = 0.999;
 /// Spectral flatness below which a buffer is classified as tonal (a pure tone
 /// or music) rather than speech.
 ///
-/// Measured against this crate's fixtures: a pure sine sits around 0.001-0.005,
-/// speech-like signals around 0.06-0.30, and white noise above 0.5. 0.02 sits
-/// in the gap between tone and speech with margin on both sides.
+/// Measured against this crate's fixtures: a pure sine sits below 1e-8,
+/// speech-like signals around 0.04-0.06, and white noise above 0.5. 0.02 sits
+/// in the gap between tone and speech, roughly a factor of two below the
+/// lowest speech measurement and many orders of magnitude above a pure tone.
+///
+/// The gap on the tone side is enormous and the gap on the speech side is
+/// about 2x, so this threshold is far more reliable at catching sustained
+/// tones than at catching lightly musical speech. That is the intended
+/// trade-off: rejecting real speech is the failure mode v2 exists to avoid.
 ///
 /// This is a constant rather than a [`FilterPolicy`] field because the policy's
 /// shape is fixed by the v2 pipeline design.
@@ -185,6 +191,10 @@ pub fn wada_snr_db(samples: &[f32]) -> f32 {
 
     let nf = n as f64;
     let mean_abs = sum_abs / nf;
+    // `!(x > 0.0)` rather than `x <= 0.0`: the negated form also catches NaN,
+    // which must be rejected here. Clippy's neg_cmp_op_on_partial_ord lint
+    // suggests partial_cmp, but that would obscure exactly the property we want.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     if !(mean_abs > 0.0) {
         return f32::NEG_INFINITY;
     }
@@ -483,6 +493,9 @@ impl FilterPolicy {
         }
         // A non-finite SNR here means the buffer was too short to estimate,
         // which is a rejection rather than a pass.
+        // Negated form is deliberate: a NaN metric must fail the check rather
+        // than silently pass, which `<` would allow.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
         if !(m.wada_snr_db >= self.min_snr_db) {
             return Some(RejectReason::LowSnr);
         }
@@ -681,7 +694,7 @@ mod tests {
         let mut buf = vec![0.5f32; 100];
         buf[..10].fill(1.0);
         assert!((clip_ratio(&buf) - 0.10).abs() < 1e-6);
-        assert_eq!(clip_ratio(&vec![0.0f32; 10]), 0.0);
+        assert_eq!(clip_ratio(&[0.0f32; 10]), 0.0);
     }
 
     #[test]
