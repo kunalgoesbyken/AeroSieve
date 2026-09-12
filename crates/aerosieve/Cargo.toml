@@ -3,17 +3,29 @@ name = "aerosieve"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Batch audio curation pipeline: decode, segment, score, shard"
+
+[features]
+default = []
+silero = ["aerosieve-segment/silero"]
 
 [dependencies]
-aerosieve-ring = { path = "../aerosieve-ring" }
-aerosieve-acoustic = { path = "../aerosieve-acoustic" }
-aerosieve-lexical = { path = "../aerosieve-lexical" }
-aerosieve-sink = { path = "../aerosieve-sink" }
+aerosieve-ring.workspace = true
+aerosieve-acoustic.workspace = true
+aerosieve-decode.workspace = true
+aerosieve-segment.workspace = true
+aerosieve-shard.workspace = true
+aerosieve-lexical.workspace = true
+crossbeam-channel.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
-criterion = "0.5"
-uuid = { version = "1", features = ["v4"] }
+criterion.workspace = true
 sysinfo = "0.35"
+hound.workspace = true
 
 [[bench]]
 name = "pipeline_benchmark"
