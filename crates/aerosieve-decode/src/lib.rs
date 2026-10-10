@@ -24,6 +24,7 @@ pub use error::DecodeError;
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
+use std::ops::RangeInclusive;
 use std::path::Path;
 
 use symphonia::core::audio::SampleBuffer;
@@ -134,6 +135,14 @@ impl<R: Read + Seek + Send + Sync> MediaSource for ReadSeekSource<R> {
     }
 }
 
+/// Source rates accepted from a file header. The header is untrusted, and a
+/// tiny declared rate would make resampling inflate the audio without bound.
+const SOURCE_SAMPLE_RATES: RangeInclusive<u32> = 1_000..=768_000;
+
+/// Upper bound on the buffer reserved from a header's declared frame count:
+/// ten minutes at 48 kHz. Longer audio still decodes; the buffer just grows.
+const MAX_PREALLOCATED_FRAMES: u64 = 48_000 * 600;
+
 struct Track {
     id: u32,
     codec: CodecParameters,
@@ -213,8 +222,10 @@ fn select_track(format: &dyn FormatReader) -> Result<Track, DecodeError> {
     let sample_rate = track
         .codec_params
         .sample_rate
-        .filter(|&rate| rate > 0)
         .ok_or(DecodeError::MissingSampleRate)?;
+    if !SOURCE_SAMPLE_RATES.contains(&sample_rate) {
+        return Err(DecodeError::UnsupportedSampleRate(sample_rate));
+    }
 
     Ok(Track {
         id: track.id,
@@ -232,7 +243,8 @@ fn decode_to_mono(format: &mut dyn FormatReader, track: &Track) -> Result<MonoTr
         .make(&track.codec, &DecoderOptions::default())
         .map_err(|error| DecodeError::UnsupportedFormat(error.to_string()))?;
 
-    let mut samples = Vec::with_capacity(track.codec.n_frames.unwrap_or(0) as usize);
+    let declared_frames = track.codec.n_frames.unwrap_or(0);
+    let mut samples = Vec::with_capacity(declared_frames.min(MAX_PREALLOCATED_FRAMES) as usize);
     let mut source_channels = track.codec.channels.map_or(0, |channels| channels.count());
     let mut interleaved: Option<SampleBuffer<f32>> = None;
 

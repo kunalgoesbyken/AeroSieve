@@ -25,6 +25,9 @@ pub enum DecodeError {
     #[error("audio track has no declared sample rate")]
     MissingSampleRate,
 
+    #[error("audio track declares an unsupported sample rate of {0} Hz")]
+    UnsupportedSampleRate(u32),
+
     /// An unrecoverable error was raised while decoding packets.
     #[error("decode error: {0}")]
     Decode(String),

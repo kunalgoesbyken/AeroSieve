@@ -227,6 +227,18 @@ fn non_audio_bytes_are_an_error() {
 }
 
 #[test]
+fn implausible_source_sample_rates_are_rejected() {
+    for sample_rate in [1u32, 999, 1_000_000] {
+        let bytes = wav_bytes(&[0.1; 64], sample_rate, 1);
+        let result = decode_reader(Cursor::new(bytes), None, &DecodeConfig::default());
+        assert!(matches!(
+            result,
+            Err(DecodeError::UnsupportedSampleRate(rate)) if rate == sample_rate
+        ));
+    }
+}
+
+#[test]
 fn zero_target_sample_rate_is_rejected() {
     let config = DecodeConfig {
         target_sample_rate: 0,
