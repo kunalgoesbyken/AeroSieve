@@ -1,7 +1,7 @@
 # AeroSieve
 
 [![CI](https://github.com/kunalgoesbyken/AeroSieve/actions/workflows/ci.yml/badge.svg)](https://github.com/kunalgoesbyken/AeroSieve/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/aerosieve-cli.svg)](https://crates.io/crates/aerosieve-cli)
+[![crates.io](https://img.shields.io/crates/v/aerosieve.svg)](https://crates.io/crates/aerosieve)
 [![docs.rs](https://img.shields.io/docsrs/aerosieve)](https://docs.rs/aerosieve)
 
 AeroSieve turns raw audio recordings into training data for speech models. It decodes each file, cuts it into speech clips, drops the clips that are silent, noisy, clipped, or not speech, and writes the rest as [WebDataset](https://github.com/webdataset/webdataset) shards.
