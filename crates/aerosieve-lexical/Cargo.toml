@@ -8,7 +8,7 @@ description = "Single-pass leftmost-longest transcript normalization driven by Y
 [dependencies]
 regex.workspace = true
 serde.workspace = true
-serde_yaml.workspace = true
+serde-saphyr.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

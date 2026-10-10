@@ -157,7 +157,7 @@ fn yaml_fields_other_than_pattern_are_optional() {
 
 #[test]
 fn legacy_format_action_reads_as_replace() {
-    let rule: Rule = serde_yaml::from_str("{ pattern: x, action: Format }").unwrap();
+    let rule: Rule = serde_saphyr::from_str("{ pattern: x, action: Format }").unwrap();
     assert_eq!(rule.action, RuleAction::Replace);
 }
 

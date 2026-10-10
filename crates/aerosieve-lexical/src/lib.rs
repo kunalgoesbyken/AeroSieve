@@ -84,7 +84,7 @@ pub enum LexicalError {
     #[error("failed to read rule file: {0}")]
     Io(#[from] std::io::Error),
     #[error("failed to parse rule YAML: {0}")]
-    Yaml(#[from] serde_yaml::Error),
+    Yaml(#[from] serde_saphyr::Error),
     #[error("ruleset version {found} is not supported (expected {RULESET_VERSION})")]
     UnsupportedVersion { found: u32 },
     #[error("invalid pattern {pattern:?}: {source}")]
@@ -168,7 +168,7 @@ impl RuleEngine {
     }
 
     pub fn from_yaml(yaml: &str) -> Result<Self, LexicalError> {
-        Self::from_rule_set(&serde_yaml::from_str(yaml)?)
+        Self::from_rule_set(&serde_saphyr::from_str(yaml)?)
     }
 
     pub fn from_rule_set(rule_set: &RuleSet) -> Result<Self, LexicalError> {
