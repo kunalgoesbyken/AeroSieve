@@ -5,16 +5,19 @@
 //! ```
 
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use aerosieve::{DecodedAudio, Pipeline, PipelineConfig};
 use aerosieve_fixtures::{SAMPLE_RATE, glottal_speech, samples, silence};
 
-const OUTPUT_DIR: &str = "data/clean";
+const OUTPUT_ROOT: &str = "data/clean";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rules =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../aerosieve-lexical/rules/hinglish.yaml");
-    let config = PipelineConfig::new("data/staging", OUTPUT_DIR).with_rules(rules);
+    let started = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let output_dir = PathBuf::from(OUTPUT_ROOT).join(format!("run-{started}"));
+    let config = PipelineConfig::new("data/staging", &output_dir).with_rules(rules);
     let mut pipeline = Pipeline::new(config)?;
 
     let recording = [
@@ -52,8 +55,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         stats.retention_rate() * 100.0
     );
     println!(
-        "Wrote {} sample(s) across {} shard(s) to {OUTPUT_DIR}",
-        stats.shard.samples_written, stats.shard.shards_written
+        "Wrote {} sample(s) across {} shard(s) to {}",
+        stats.shard.samples_written,
+        stats.shard.shards_written,
+        output_dir.display()
     );
     Ok(())
 }

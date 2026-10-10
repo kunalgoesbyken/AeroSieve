@@ -305,6 +305,31 @@ fn a_writer_dropped_before_finish_publishes_only_completed_shards() {
 }
 
 #[test]
+fn an_output_directory_that_holds_a_run_is_refused() {
+    let workspace = Workspace::new();
+    let mut writer = workspace.writer();
+    writer.write_sample(&audio(160), meta("first run")).unwrap();
+    writer.finish().unwrap();
+
+    let second = ShardWriter::new(workspace.config());
+
+    assert!(matches!(
+        second,
+        Err(ShardError::OutputNotEmpty(path)) if path == workspace.output()
+    ));
+    assert_eq!(workspace.manifest()[0].meta.transcript, "first run");
+}
+
+#[test]
+fn unrelated_files_in_the_output_directory_are_tolerated() {
+    let workspace = Workspace::new();
+    fs::create_dir_all(workspace.output()).unwrap();
+    fs::write(workspace.output().join(".gitkeep"), b"").unwrap();
+
+    assert!(ShardWriter::new(workspace.config()).is_ok());
+}
+
+#[test]
 fn writers_sharing_a_staging_directory_do_not_collide() {
     let workspace = Workspace::new();
     let other_output = workspace.root.path().join("other");

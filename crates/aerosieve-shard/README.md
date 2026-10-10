@@ -60,4 +60,4 @@ A shard is built in a private scratch directory under `staging_dir`, flushed to 
 - A writer dropped without `finish` removes its scratch directory. Shards it had already completed remain in `output_dir`, without a manifest.
 - Several writers can share one `staging_dir`.
 - A run with no samples publishes an empty manifest and no shard.
-- Shard and manifest names are deterministic, so writing into an `output_dir` that already holds a run replaces that run's files. Use a fresh directory per run.
+- A writer refuses an `output_dir` that already holds shards, a manifest, or stats. Use a fresh directory per run.

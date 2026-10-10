@@ -22,6 +22,8 @@ use tempfile::TempDir;
 
 pub const DEFAULT_TARGET_SHARD_BYTES: u64 = 1_000_000_000;
 
+const SHARD_PREFIX: &str = "shard-";
+const SHARD_SUFFIX: &str = ".tar";
 const MANIFEST_FILE: &str = "manifest.jsonl";
 const STATS_FILE: &str = "stats.json";
 const TAR_BLOCK_BYTES: u64 = 512;
@@ -100,6 +102,8 @@ pub enum ShardError {
     Json(#[from] serde_json::Error),
     #[error("sample metadata declares a sample rate of zero")]
     ZeroSampleRate,
+    #[error("{} already holds a run; write each run to its own directory", .0.display())]
+    OutputNotEmpty(PathBuf),
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -119,7 +123,7 @@ struct OpenShard {
 
 impl OpenShard {
     fn create(staging_dir: &Path, index: u64) -> Result<Self, ShardError> {
-        let name = format!("shard-{index:06}.tar");
+        let name = format!("{SHARD_PREFIX}{index:06}{SHARD_SUFFIX}");
         let staging_path = staging_dir.join(&name);
         let archive = tar::Builder::new(BufWriter::new(File::create(&staging_path)?));
         Ok(Self {
@@ -157,8 +161,8 @@ impl OpenShard {
 /// Nothing but completed shards reaches `output_dir` until [`finish`] is
 /// called. A writer dropped without it leaves no partial files behind.
 ///
-/// Shards and the manifest are named deterministically, so writing into an
-/// `output_dir` that already holds a run replaces that run's files.
+/// Shards and the manifest are named deterministically, so a writer refuses
+/// an `output_dir` that already holds shards, a manifest, or stats.
 ///
 /// [`finish`]: ShardWriter::finish
 pub struct ShardWriter {
@@ -174,6 +178,9 @@ impl ShardWriter {
     pub fn new(config: ShardConfig) -> Result<Self, ShardError> {
         std::fs::create_dir_all(&config.staging_dir)?;
         std::fs::create_dir_all(&config.output_dir)?;
+        if holds_a_run(&config.output_dir)? {
+            return Err(ShardError::OutputNotEmpty(config.output_dir));
+        }
         let scratch = TempDir::new_in(&config.staging_dir)?;
         let manifest = BufWriter::new(File::create(scratch.path().join(MANIFEST_FILE))?);
         Ok(Self {
@@ -271,6 +278,18 @@ impl ShardWriter {
         self.stats.shards_written += 1;
         Ok(())
     }
+}
+
+fn holds_a_run(output_dir: &Path) -> std::io::Result<bool> {
+    for entry in std::fs::read_dir(output_dir)? {
+        let name = entry?.file_name();
+        let name = name.to_string_lossy();
+        let is_shard = name.starts_with(SHARD_PREFIX) && name.ends_with(SHARD_SUFFIX);
+        if is_shard || name == MANIFEST_FILE || name == STATS_FILE {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn sync_and_close(writer: BufWriter<File>) -> std::io::Result<()> {
