@@ -10,6 +10,8 @@ ACCEPTED = "accept"
 ACCEPT_COLOR = "#2e7d32"
 REJECT_COLOR = "#c62828"
 MAX_PLOT_POINTS = 4000
+MAX_UPLOAD_SIZE = "25mb"
+MAX_DURATION_S = 600
 COLUMNS = ["start (s)", "length (s)", "SNR (dB)", "level (dBFS)", "clipping", "flatness", "verdict"]
 
 
@@ -54,9 +56,20 @@ def clip_rows(clips):
     ]
 
 
+def ensure_within_duration_limit(path):
+    """Refuse recordings that would decode to more audio than the demo should hold."""
+    try:
+        duration_s = sf.info(path).duration
+    except sf.LibsndfileError as error:
+        raise gr.Error("This file could not be read as audio.") from error
+    if duration_s > MAX_DURATION_S:
+        raise gr.Error(f"Recordings are limited to {MAX_DURATION_S // 60} minutes in this demo.")
+
+
 def inspect(path, min_snr_db, min_spectral_flatness):
     if path is None:
         raise gr.Error("Upload or record some audio first.")
+    ensure_within_duration_limit(path)
     policy = {"min_snr_db": min_snr_db, "min_spectral_flatness": min_spectral_flatness}
     try:
         clips = aerosieve.inspect(path, policy=policy)["clips"]
@@ -88,4 +101,4 @@ with gr.Blocks(title="AeroSieve") as demo:
     run.click(inspect, [audio, min_snr_db, min_flatness], [plot, table, summary])
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(max_file_size=MAX_UPLOAD_SIZE)

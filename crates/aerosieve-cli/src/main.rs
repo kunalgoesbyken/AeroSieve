@@ -19,6 +19,7 @@ use crate::summary::Summary;
 
 const TRANSCRIPT_EXTENSION: &str = "txt";
 const DEFAULT_STAGING_SUBDIR: &str = ".staging";
+const MAX_TRANSCRIPT_BYTES: u64 = 1024 * 1024;
 
 type CliResult<T> = Result<T, Box<dyn Error>>;
 
@@ -115,8 +116,9 @@ fn curate(args: &CurateArgs) -> CliResult<()> {
     let mut pipeline = Pipeline::new(config)?;
 
     for file in &files {
-        let transcript = sidecar_transcript(file)?;
-        if let Err(error) = pipeline.process_file(file, transcript.as_deref()) {
+        let curated = sidecar_transcript(file)
+            .and_then(|transcript| Ok(pipeline.process_file(file, transcript.as_deref())?));
+        if let Err(error) = curated {
             eprintln!("{}: skipped ({error})", file.display());
         }
     }
@@ -145,10 +147,24 @@ fn curate(args: &CurateArgs) -> CliResult<()> {
 }
 
 /// The transcript stored next to `audio` as `<name>.txt`, if there is one.
+///
+/// Only a regular file of modest size is read. A corpus may come from an
+/// untrusted source, and following a symlink here would copy whatever it
+/// points at into the published manifest.
 fn sidecar_transcript(audio: &Path) -> CliResult<Option<String>> {
     let path = audio.with_extension(TRANSCRIPT_EXTENSION);
-    if !path.is_file() {
+    let Ok(metadata) = std::fs::symlink_metadata(&path) else {
         return Ok(None);
+    };
+    if !metadata.is_file() {
+        return Err(format!("{}: not a regular file", path.display()).into());
+    }
+    if metadata.len() > MAX_TRANSCRIPT_BYTES {
+        return Err(format!(
+            "{}: transcript is larger than {MAX_TRANSCRIPT_BYTES} bytes",
+            path.display()
+        )
+        .into());
     }
     let transcript =
         std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
