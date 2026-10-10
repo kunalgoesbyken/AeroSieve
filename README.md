@@ -1,5 +1,9 @@
 # AeroSieve
 
+[![CI](https://github.com/kunalgoesbyken/AeroSieve/actions/workflows/ci.yml/badge.svg)](https://github.com/kunalgoesbyken/AeroSieve/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/aerosieve-cli.svg)](https://crates.io/crates/aerosieve-cli)
+[![docs.rs](https://img.shields.io/docsrs/aerosieve)](https://docs.rs/aerosieve)
+
 AeroSieve turns raw audio recordings into training data for speech models. It decodes each file, cuts it into speech clips, drops the clips that are silent, noisy, clipped, or not speech, and writes the rest as [WebDataset](https://github.com/webdataset/webdataset) shards.
 
 It is written in Rust, runs on CPU with no ML model by default, and can be used as a command-line tool, a Rust library, or from Python.
@@ -27,7 +31,7 @@ flowchart LR
 ## Command line
 
 ```bash
-cargo install --path crates/aerosieve-cli
+cargo install aerosieve-cli
 ```
 
 See how the filter judges your recordings, without writing anything:
