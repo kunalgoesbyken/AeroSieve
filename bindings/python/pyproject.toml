@@ -1,0 +1,22 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "aerosieve"
+description = "Batch audio curation: segment, quality-filter, and shard recordings into speech training data"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/kunalgoesbyken/AeroSieve"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]

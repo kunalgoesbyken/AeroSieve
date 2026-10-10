@@ -9,3 +9,6 @@
 !/data/clean/.gitkeep
 /models/*
 !/models/README.md
+/bindings/python/Cargo.lock
+/bindings/python/target/
+__pycache__/
