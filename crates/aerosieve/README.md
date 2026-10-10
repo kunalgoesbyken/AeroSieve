@@ -30,5 +30,6 @@ The stage crates are re-exported as `aerosieve::{acoustic, decode, lexical, segm
 ```bash
 cargo run --release --example basic
 cargo run --release --example report
+cargo run --release --example inspect -- recording.wav
 cargo bench --bench pipeline_benchmark
 ```

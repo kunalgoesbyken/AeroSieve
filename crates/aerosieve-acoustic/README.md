@@ -37,7 +37,7 @@ Flatness is restricted to the speech band because resampled audio has empty bins
 | `min_dbfs` | −40 | `too_quiet` |
 | `max_dbfs` | −3 | `too_loud` |
 | `max_clip_ratio` | 0.01 | `clipping` |
-| `min_spectral_flatness` | 0.02 | `tonal` |
+| `min_spectral_flatness` | 0.005 | `tonal` |
 | `min_snr_db` | 10 | `low_snr` |
 
-The defaults are calibrated on the synthetic signals in `aerosieve-fixtures`, not on real recordings.
+On a small set of real recordings, clean speech read 13 dB or more on WADA-SNR and 0.02 to 0.18 on flatness, while 13 of 14 music clips read 8 dB or less on WADA-SNR, with flatness overlapping speech. So the SNR floor is what rejects most music, and the flatness floor catches tones and hum. The root README has the numbers.

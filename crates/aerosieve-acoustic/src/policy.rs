@@ -47,8 +47,9 @@ impl std::fmt::Display for RejectReason {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct FilterPolicy {
-    /// WADA-SNR floor, in dB. WADA is biased low, so a strict floor discards
-    /// usable speech.
+    /// WADA-SNR floor, in dB. WADA reads a few dB low on real speech, so this
+    /// default keeps speech with roughly 15 dB or more of true SNR. It is
+    /// also what rejects most music.
     pub min_snr_db: f32,
     /// Largest tolerated fraction of clipped samples.
     pub max_clip_ratio: f32,
@@ -56,8 +57,9 @@ pub struct FilterPolicy {
     pub min_dbfs: f32,
     /// RMS level ceiling, in dBFS.
     pub max_dbfs: f32,
-    /// Spectral flatness floor. Pure tones read below 1e-4; the speech-like
-    /// fixtures this default was calibrated on read above 0.1.
+    /// Spectral flatness floor. Pure tones read below 1e-4 and real speech
+    /// above 0.02. Music overlaps speech here, so this catches tones and hum
+    /// but not music.
     pub min_spectral_flatness: f32,
 }
 
@@ -68,7 +70,7 @@ impl Default for FilterPolicy {
             max_clip_ratio: 0.01,
             min_dbfs: -40.0,
             max_dbfs: -3.0,
-            min_spectral_flatness: 0.02,
+            min_spectral_flatness: 0.005,
         }
     }
 }
