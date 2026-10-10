@@ -1,50 +1,39 @@
 # AeroSieve
 
-**A batch audio curation pipeline in Rust.** Raw audio in, model-ready training shards out.
+AeroSieve turns raw audio recordings into training data for speech models. It decodes each file, cuts it into speech clips, drops the clips that are silent, noisy, clipped, or not speech, and writes the rest as [WebDataset](https://github.com/webdataset/webdataset) shards.
 
-Speech models are trained on millions of short audio and transcript pairs, and most scraped audio is unusable: clipped, noisy, silent, or music. AeroSieve decides what to keep. It decodes any common container, cuts speech into training-length clips with a VAD state machine, scores every clip with deterministic DSP, and writes what survives as [WebDataset](https://github.com/webdataset/webdataset) shards.
+It is written in Rust and runs on CPU with no ML model by default.
 
-This repository is a systems-engineering demonstration, not a product. Its filter thresholds are calibrated on synthetic audio (see [Limitations](#limitations)).
-
-## Architecture
-
-The stages follow [Emilia-Pipe](https://arxiv.org/abs/2407.05361), the pipeline behind a 101k-hour speech dataset.
+## How it works
 
 ```mermaid
 flowchart LR
-    SRC["Audio files<br/>wav · mp3 · flac<br/>ogg · mp4"]
-    DEC["① Decode<br/>symphonia + rubato<br/>→ 16 kHz mono, −20 dBFS"]
-    SEG["② Segment<br/>hysteresis VAD<br/>→ 3–30 s clips"]
-    SCO["③ Score<br/>WADA-SNR · clipping<br/>level · flatness"]
-    SHD["④ Shard<br/>WebDataset tar<br/>+ manifest"]
-    REJ(["rejected"])
-
-    SRC --> DEC --> SEG --> SCO
-    SCO -->|accept| SHD
-    SCO -.->|silence · low SNR<br/>clipping · tonal| REJ
+    A[Audio file] --> B[Decode]
+    B --> C[Segment]
+    C --> D[Score]
+    D -->|pass| E[Shard]
+    D -.->|fail| F[Rejected]
 ```
 
-| Stage | Crate | What it does |
+| Step | What happens | Crate |
 | :--- | :--- | :--- |
-| ① Decode | [`aerosieve-decode`](crates/aerosieve-decode) | symphonia demux and decode, downmix, rubato resample, RMS normalization with clamped gain |
-| ② Segment | [`aerosieve-segment`](crates/aerosieve-segment) | Hysteresis state machine emitting variable-length clips; pluggable `SpeechDetector` |
-| ③ Score | [`aerosieve-acoustic`](crates/aerosieve-acoustic) | WADA-SNR, clip ratio, level, and spectral flatness, judged by a tunable `FilterPolicy` |
-| ④ Shard | [`aerosieve-shard`](crates/aerosieve-shard) | WebDataset tar shards with atomic commit, manifest, and stats |
-| — | [`aerosieve-lexical`](crates/aerosieve-lexical) | Single-pass transcript normalization driven by YAML rules |
-| — | [`aerosieve`](crates/aerosieve) | The `Pipeline` that wires the stages together |
+| Decode | Read wav, mp3, flac, ogg, or mp4. Convert to 16 kHz mono and even out the loudness. | [`aerosieve-decode`](crates/aerosieve-decode) |
+| Segment | Find where speech starts and stops, and cut clips of 3 to 30 seconds. | [`aerosieve-segment`](crates/aerosieve-segment) |
+| Score | Measure each clip's noise, loudness, clipping, and tonality, and compare against thresholds. | [`aerosieve-acoustic`](crates/aerosieve-acoustic) |
+| Shard | Write accepted clips into tar files, with a manifest listing every clip. | [`aerosieve-shard`](crates/aerosieve-shard) |
 
-`aerosieve-fixtures` holds the deterministic synthetic audio shared by tests, benches, and examples.
+Two more crates sit alongside these. [`aerosieve-lexical`](crates/aerosieve-lexical) cleans up transcripts using regex rules from a YAML file. [`aerosieve`](crates/aerosieve) connects everything into one `Pipeline`.
 
 ## Quickstart
 
 ```bash
 cargo test --workspace
 cargo run --release --example basic     # curate one synthetic recording into data/clean
-cargo run --release --example report    # what the default filter keeps, and how fast
-cargo bench --bench pipeline_benchmark  # per-stage cost
+cargo run --release --example report    # show what the filter keeps and how long it takes
+cargo run --release --example inspect -- your.wav   # see how the filter judges your own audio
 ```
 
-### Usage
+## Usage
 
 ```rust
 use aerosieve::{Pipeline, PipelineConfig};
@@ -57,75 +46,81 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     pipeline.process_file("recording.wav".as_ref(), Some("yeh ₹500 hai"))?;
 
     let stats = pipeline.finish()?;
-    println!("retention {:.1}%", stats.retention_rate() * 100.0);
+    println!("kept {:.1}% of detected speech", stats.retention_rate() * 100.0);
     Ok(())
 }
 ```
 
-Output lands in `data/clean` as `shard-000000.tar` (paired `{key}.wav` and `{key}.json` members), plus `manifest.jsonl` and `stats.json`.
+This writes to `data/clean`:
 
-`Pipeline::new` detects speech by signal level. To use another detector, such as Silero VAD, pass it to `Pipeline::with_detector`.
+```
+shard-000000.tar    clips, each stored as {key}.wav and {key}.json
+manifest.jsonl      one line per clip: key, shard, transcript, metrics
+stats.json          totals
+```
 
-## What the filter does
+The transcript is optional. `with_rules` is optional too; without it transcripts are stored as given.
 
-Printed by `cargo run --release --example report`:
+Each run needs its own output directory. The pipeline refuses to write into one that already holds a run.
 
-| Input | WADA-SNR | Level | Flatness | Verdict |
+## What gets rejected
+
+Output of `cargo run --release --example report`:
+
+| Input | SNR | Level | Flatness | Result |
 | :--- | ---: | ---: | ---: | :--- |
-| clean speech | 14.7 dB | −22.4 dBFS | 0.192 | **accept** |
-| digital silence | −∞ | −∞ | 1.000 | silence |
-| quiet speech | 14.7 dB | −56.4 dBFS | 0.192 | too_quiet |
-| clipped speech | 13.8 dB | −7.4 dBFS | 0.210 | clipping |
-| pure tone | −20.0 dB | −9.0 dBFS | 0.000 | tonal |
-| white noise | −14.9 dB | −20.0 dBFS | 0.562 | low_snr |
+| clean speech | 14.7 dB | −22.4 dBFS | 0.192 | accepted |
+| silence | −∞ | −∞ | 1.000 | `silence` |
+| very quiet speech | 14.7 dB | −56.4 dBFS | 0.192 | `too_quiet` |
+| clipped speech | 13.8 dB | −7.4 dBFS | 0.210 | `clipping` |
+| pure tone | −20.0 dB | −9.0 dBFS | 0.000 | `tonal` |
+| white noise | −14.9 dB | −20.0 dBFS | 0.562 | `low_snr` |
 
-Every threshold is a field of `FilterPolicy`.
+- **SNR** is estimated with [WADA-SNR](https://www.isca-archive.org/interspeech_2008/kim08e_interspeech.html), which needs only the clip itself and no clean reference.
+- **Flatness** separates tones and music (near 0) from speech and noise. It is measured between 300 and 3400 Hz so that resampled audio is not mistaken for a tone.
 
-**WADA-SNR** ([Kim & Stern, Interspeech 2008](https://www.isca-archive.org/interspeech_2008/kim08e_interspeech.html)) estimates SNR from the amplitude distribution of a single buffer, with no clean reference and no separate noise estimate. It models clean speech as Gamma(0.4) and noise as Gaussian, so anything that is not speech-like, including a noiseless sine, reads as low SNR.
+Every threshold is a field of `FilterPolicy` and can be changed with `PipelineConfig::with_policy`.
 
-**Spectral flatness** is measured over the 300–3400 Hz speech band rather than the whole spectrum. A resampler's low-pass empties the bins near Nyquist, and upsampled telephone audio has nothing above 4 kHz; over the full spectrum either one makes speech read as a tone.
+### Checked on real recordings
 
-## Performance
+The table above uses synthetic signals. The defaults were also run on a small set of public recordings:
 
-Measured on one Windows laptop, release build, single thread. The same report run curates a 10-minute synthetic corpus in which two runs in five are usable speech and the rest are clipped, tonal, or noisy:
+| Audio | Clips | Accepted |
+| :--- | ---: | ---: |
+| Clean speech in English, German, Spanish, and Russian, at 8 and 16 kHz | 31 | 31 |
+| The same speech with noise added at 20 dB SNR | 30 | 30 |
+| at 15 dB | 30 | 23 |
+| at 10 dB | 30 | 4 |
+| at 5 dB | 30 | 0 |
+| Music (four tracks) | 14 | 1 |
 
-| Metric | Value |
+The one music clip that passed was a solo trumpet. Music is rejected mostly by the SNR check, since its flatness overlaps with speech.
+
+The speech came from the Silero VAD sample files, the Open Speech Repository, and the VOiCES corpus; the music from librosa's example audio. None of it is stored in this repository. This is a sanity check on a few minutes of audio, so run `inspect` on your own recordings before a large job.
+
+## Speed
+
+On one laptop core, a 10-minute test recording takes about 340 ms to segment, score, and shard. That figure starts from decoded samples, so decoding is not included.
+
+| Operation | Time |
 | :--- | ---: |
-| Wall clock for 10 minutes of audio | ~340 ms |
-| Segments found → accepted | 92 → 38 |
-| Retention of detected speech, by duration | 41.3% |
-| Rejections | 18 clipping · 18 tonal · 18 low_snr |
+| Segment 1 minute of audio | 1.2 ms |
+| Score a 5-second clip | 3.2 ms |
+| Clean up one transcript | 10 µs |
+| Write a 5-second clip to a shard | 8.3 ms |
 
-That run starts from decoded samples, so it excludes decoding and resampling.
+Run `cargo bench --bench pipeline_benchmark` to measure on your machine.
 
-| Stage | Operation | Time |
-| :--- | :--- | ---: |
-| Segment | 1 minute of audio | ~1.2 ms |
-| Score | 5 s clip, all metrics | ~3.2 ms |
-| Normalize | one Hinglish sentence | ~10 µs |
-| Shard | write and commit one 5 s clip | ~8.3 ms |
+## Silero VAD
 
-Sharding is bound by the disk; everything upstream is compute.
-
-## Design decisions
-
-**Deterministic DSP by default, ML opt-in.** The default build has no ONNX dependency. Silero VAD is available behind `--features silero`; see [`aerosieve-segment`](crates/aerosieve-segment) for toolchain requirements.
-
-**Segments, not frames.** A per-frame speech flag cannot express "a 40 ms dip mid-word is not the end of an utterance". The segmenter uses separate enter and exit thresholds and a minimum silence duration, with Silero's documented defaults.
-
-**Single-pass normalization.** Chained `replace_all` lets one rule rewrite another's output: `dr → doctor` followed by `doctor → PHYSICIAN` yields `PHYSICIAN`. Here every rule matches the original text and overlaps are resolved leftmost-longest.
-
-**Sharded output.** Per-sample files mean millions of small random reads at training time. Shards are read sequentially and stream from object storage.
-
-**Errors are loud.** A missing rules file, a misspelled rule field, a failed inference, or stages configured for different sample rates stop the run instead of degrading it silently.
+By default speech is detected from signal level, so loud music counts as speech. For a real speech detector, build with `--features silero` and pass a `SileroDetector` to `Pipeline::with_detector`. Setup is described in [`aerosieve-segment`](crates/aerosieve-segment#silerodetector-feature-silero).
 
 ## Limitations
 
-- The default `FilterPolicy` is calibrated on synthetic speech-like signals, not on a labelled corpus of real recordings. Validate it on your own data before trusting its retention figures.
-- One transcript is supplied per file and attached to every clip cut from it. Transcripts are not aligned to clips, and AeroSieve does not run ASR.
-- Shard and manifest names are deterministic, so writing into an output directory that already holds a run replaces that run's files.
-- Files are processed one at a time on one thread.
-- Not implemented: source separation, speaker diarization, streaming input, GPU execution.
+- The default thresholds have only been checked on the small set of recordings above.
+- A single sustained instrument can pass as speech.
+- One transcript is given per file and copied to every clip from that file. Transcripts are not aligned to clips, and there is no speech recognition.
+- Files are processed one at a time on a single thread.
 
 ## License
 
