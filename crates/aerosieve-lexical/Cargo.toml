@@ -3,10 +3,9 @@ name = "aerosieve-lexical"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Single-pass leftmost-longest text normalization for code-mixed transcripts"
+description = "Single-pass leftmost-longest transcript normalization driven by YAML rules"
 
 [dependencies]
-aho-corasick.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true

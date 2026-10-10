@@ -1,0 +1,7 @@
+[package]
+name = "aerosieve-fixtures"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Deterministic synthetic audio shared by AeroSieve tests, benches, and examples"
+publish = false

@@ -6,10 +6,12 @@ license.workspace = true
 description = "Audio decoding, resampling, and loudness standardization for AeroSieve"
 
 [dependencies]
+aerosieve-acoustic.workspace = true
 symphonia.workspace = true
 rubato.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+aerosieve-fixtures.workspace = true
 hound.workspace = true
-criterion.workspace = true
+tempfile.workspace = true

@@ -1,12 +1,11 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/aerosieve-ring",
+    "crates/aerosieve-fixtures",
     "crates/aerosieve-acoustic",
     "crates/aerosieve-decode",
     "crates/aerosieve-segment",
     "crates/aerosieve-shard",
-    "crates/aerosieve-sink",
     "crates/aerosieve-lexical",
     "crates/aerosieve",
 ]
@@ -17,12 +16,11 @@ version = "0.2.0"
 license = "MIT"
 
 [workspace.dependencies]
-aerosieve-ring = { path = "crates/aerosieve-ring", version = "0.2.0" }
+aerosieve-fixtures = { path = "crates/aerosieve-fixtures" }
 aerosieve-acoustic = { path = "crates/aerosieve-acoustic", version = "0.2.0" }
 aerosieve-decode = { path = "crates/aerosieve-decode", version = "0.2.0" }
 aerosieve-segment = { path = "crates/aerosieve-segment", version = "0.2.0" }
 aerosieve-shard = { path = "crates/aerosieve-shard", version = "0.2.0" }
-aerosieve-sink = { path = "crates/aerosieve-sink", version = "0.2.0" }
 aerosieve-lexical = { path = "crates/aerosieve-lexical", version = "0.2.0" }
 
 thiserror = "2"
@@ -31,14 +29,12 @@ serde_json = "1"
 serde_yaml = "0.9"
 symphonia = { version = "0.5", features = ["all"] }
 rubato = "0.16"
-crossbeam-channel = "0.5"
 tar = "0.4"
-uuid = { version = "1", features = ["v4"] }
 regex = "1.11"
-aho-corasick = "1.1"
 hound = "3.5"
 criterion = "0.5"
 proptest = "1"
+tempfile = "3"
 ort = "2.0.0-rc.13"
 
 [profile.release]

@@ -1,0 +1,111 @@
+# Normalization rules for romanized Hindi-English (Hinglish) transcripts.
+#
+# Every rule matches the original text; none sees another rule's output.
+# Where matches overlap, the leftmost wins, then the longest, then the higher
+# `priority`, then the rule listed first.
+#
+# The engine collapses whitespace after all rules have run, so rules do not
+# tidy spacing themselves.
+version: 2
+rules:
+  - pattern: '₹\s*(\d+(?:,\d{2,3})*(?:\.\d+)?)'
+    replacement: '$1 rupaye'
+    category: currency
+  - pattern: '(?i)\brs\.?\s*(\d+(?:,\d{2,3})*(?:\.\d+)?)'
+    replacement: '$1 rupaye'
+    category: currency
+  - pattern: '(?i)\b(\d+)\s*rupees?\b'
+    replacement: '$1 rupaye'
+    category: currency
+  - pattern: '(?i)\b(\d+)\s*paise\b'
+    replacement: '$1 paise'
+    category: currency
+
+  - pattern: '(?i)\b(\d+)\s*(?:hazaar|hazar|hazzar)\b'
+    replacement: '$1 hazaar'
+    category: scale
+  - pattern: '(?i)\b(\d+)\s*(?:lakhs?|laakh|lacs?)\b'
+    replacement: '$1 lakh'
+    category: scale
+  - pattern: '(?i)\b(\d+)\s*(?:crores?|karod|caror)\b'
+    replacement: '$1 crore'
+    category: scale
+
+  - pattern: '\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b'
+    replacement: '$1-$2-$3'
+    category: dates
+  - pattern: '(?i)\b(\d{1,2})(?:st|nd|rd|th)\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\b'
+    replacement: '$1 $2'
+    category: dates
+
+  - pattern: '(?i)\bi\.e\.?'
+    replacement: 'that is'
+    category: abbreviations
+  - pattern: '(?i)\be\.g\.?'
+    replacement: 'for example'
+    category: abbreviations
+  - pattern: '(?i)\bdr\b\.?'
+    replacement: 'doctor'
+    category: abbreviations
+  - pattern: '(?i)\bprof\b\.?'
+    replacement: 'professor'
+    category: abbreviations
+  - pattern: '(?i)\bgovt\b\.?'
+    replacement: 'government'
+    category: abbreviations
+  - pattern: '(?i)\bdept\b\.?'
+    replacement: 'department'
+    category: abbreviations
+  - pattern: '(?i)\buniv\b\.?'
+    replacement: 'university'
+    category: abbreviations
+  - pattern: '(?i)\bvs\b\.?'
+    replacement: 'versus'
+    category: abbreviations
+  - pattern: '(?i)\betc\b\.?'
+    replacement: 'etcetera'
+    category: abbreviations
+
+  - pattern: '(?i)\b(?:hein|hai|hy)\b'
+    replacement: 'hai'
+    category: spelling
+  - pattern: '(?i)\b(?:hu|hoon|hun|hoo)\b'
+    replacement: 'hoon'
+    category: spelling
+  - pattern: '(?i)\b(?:kya|kaya|kyaa)\b'
+    replacement: 'kya'
+    category: spelling
+  - pattern: '(?i)\b(?:acha|accha|achchha|achha)\b'
+    replacement: 'achha'
+    category: spelling
+  - pattern: '(?i)\b(?:koi|koyi|kohi)\b'
+    replacement: 'koi'
+    category: spelling
+  - pattern: '(?i)\b(?:bahut|bahaut|bohot|bohut)\b'
+    replacement: 'bahut'
+    category: spelling
+  - pattern: '(?i)\b(?:thoda|thora|thodaa)\b'
+    replacement: 'thoda'
+    category: spelling
+  - pattern: '(?i)\b(?:nahi|nahin|nahee|nhi)\b'
+    replacement: 'nahi'
+    category: spelling
+  - pattern: '(?i)\b(?:abhi|abhee)\b'
+    replacement: 'abhi'
+    category: spelling
+
+  # Replaced with a space rather than removed, so `a<br>b` does not become `ab`.
+  - pattern: '<[^>]+>'
+    replacement: ' '
+    category: markup
+  - pattern: '&[a-zA-Z]+;'
+    replacement: ' '
+    category: markup
+
+  - pattern: '(?i)\b(?:umm|uhh|aah|hmm|uhm|mmm)\b'
+    action: Remove
+    category: disfluency
+
+  - pattern: '\s+([.,!?;:।])'
+    replacement: '$1'
+    category: punctuation

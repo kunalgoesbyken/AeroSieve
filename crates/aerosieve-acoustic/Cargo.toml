@@ -9,7 +9,9 @@ description = "Deterministic acoustic quality scoring: WADA-SNR, clipping, dBFS,
 serde.workspace = true
 
 [dev-dependencies]
+aerosieve-fixtures.workspace = true
 criterion.workspace = true
+serde_json.workspace = true
 
 [[bench]]
 name = "acoustic_benchmark"

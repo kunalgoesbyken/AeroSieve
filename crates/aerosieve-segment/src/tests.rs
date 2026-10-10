@@ -1,520 +1,331 @@
-//! Unit and property tests for the hysteresis segmenter.
-//!
-//! All tests run under default features (no ONNX). Randomness comes from a
-//! deterministic xorshift PRNG defined here, not from a `rand` dependency.
+use aerosieve_fixtures::{Rng, SAMPLE_RATE, samples, silence, tone};
+use proptest::prelude::*;
 
-use crate::{EnergyDetector, Segment, SegmentConfig, Segmenter, SpeechDetector};
+use crate::{EnergyDetector, Segment, SegmentConfig, SegmentError, Segmenter, SpeechDetector};
 
-const SR: u32 = 16_000;
+const WINDOW: usize = 512;
 
-/// Deterministic xorshift64* PRNG. No external dependency, reproducible runs.
-struct XorShift(u64);
+fn speech(len: usize) -> Vec<f32> {
+    tone(SAMPLE_RATE, 140.0, 0.3, len)
+}
 
-impl XorShift {
+fn ms(duration: u32) -> usize {
+    samples(duration as f32 / 1000.0)
+}
+
+fn concat(parts: &[Vec<f32>]) -> Vec<f32> {
+    parts.concat()
+}
+
+fn segment_with(config: SegmentConfig, audio: &[f32]) -> Vec<Segment> {
+    let segments = Segmenter::new(EnergyDetector::new(SAMPLE_RATE), config)
+        .segment(audio)
+        .unwrap();
+    assert_well_formed(&segments, audio.len());
+    segments
+}
+
+fn segment(audio: &[f32]) -> Vec<Segment> {
+    segment_with(SegmentConfig::default(), audio)
+}
+
+fn assert_well_formed(segments: &[Segment], total_samples: usize) {
+    let mut previous_end = 0;
+    for segment in segments {
+        assert!(
+            segment.start_sample >= previous_end,
+            "overlap at {segment:?}"
+        );
+        assert!(
+            segment.end_sample > segment.start_sample,
+            "empty {segment:?}"
+        );
+        assert!(
+            segment.end_sample <= total_samples,
+            "out of bounds {segment:?}"
+        );
+        previous_end = segment.end_sample;
+    }
+}
+
+/// Replays a seeded probability sequence, ignoring the audio, so the state
+/// machine is exercised independently of any real detector's behaviour.
+struct ScriptedDetector {
+    seed: u64,
+    rng: Rng,
+}
+
+impl ScriptedDetector {
     fn new(seed: u64) -> Self {
-        Self(if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed })
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        let mut x = self.0;
-        x ^= x >> 12;
-        x ^= x << 25;
-        x ^= x >> 27;
-        self.0 = x;
-        x.wrapping_mul(0x2545_F491_4F6C_DD1D)
-    }
-
-    /// Uniform in `[0.0, 1.0)`.
-    fn next_f32(&mut self) -> f32 {
-        (self.next_u64() >> 40) as f32 / (1u32 << 24) as f32
+        Self {
+            seed,
+            rng: Rng::new(seed),
+        }
     }
 }
 
-// ---------------------------------------------------------------------------
-// signal builders
-// ---------------------------------------------------------------------------
+impl SpeechDetector for ScriptedDetector {
+    fn window_size(&self) -> usize {
+        WINDOW
+    }
 
-/// Digital silence.
-fn silence(n: usize) -> Vec<f32> {
-    vec![0.0; n]
+    fn probability(&mut self, _window: &[f32]) -> Result<f32, SegmentError> {
+        Ok(self.rng.uniform())
+    }
+
+    fn reset(&mut self) {
+        self.rng = Rng::new(self.seed);
+    }
 }
 
-/// Speech-like buffer: a 140 Hz carrier with harmonics at ~0.3 amplitude,
-/// comfortably above the -45 dBFS energy threshold.
-fn speech(n: usize) -> Vec<f32> {
-    (0..n)
-        .map(|i| {
-            let t = i as f32 / SR as f32;
-            let f = 140.0 * std::f32::consts::TAU;
-            0.30 * ((f * t).sin() + 0.5 * (2.0 * f * t).sin() + 0.25 * (3.0 * f * t).sin()) / 1.75
-        })
-        .collect()
-}
-
-fn ms(n: u32) -> usize {
-    (n as usize * SR as usize) / 1000
-}
-
-fn default_config() -> SegmentConfig {
+/// Length bounds small enough that random detector output produces segments.
+fn short_clip_config() -> SegmentConfig {
     SegmentConfig {
-        sample_rate: SR,
-        ..Default::default()
+        min_segment_s: 0.05,
+        max_segment_s: 0.5,
+        ..SegmentConfig::default()
     }
 }
 
-fn segment_with(config: SegmentConfig, samples: &[f32]) -> Vec<Segment> {
-    let mut s = Segmenter::new(EnergyDetector::new(SR), config);
-    s.segment(samples)
-}
+struct FailingDetector;
 
-fn assert_invariants(segs: &[Segment], total: usize) {
-    let mut prev_end = 0usize;
-    for (i, seg) in segs.iter().enumerate() {
-        assert!(
-            seg.end_sample > seg.start_sample,
-            "segment {i} is empty or inverted: {seg:?}"
-        );
-        assert!(
-            seg.end_sample <= total,
-            "segment {i} exceeds buffer ({} > {total}): {seg:?}",
-            seg.end_sample
-        );
-        assert!(
-            seg.start_sample >= prev_end,
-            "segment {i} overlaps predecessor (start {} < prev end {prev_end})",
-            seg.start_sample
-        );
-        prev_end = seg.end_sample;
+impl SpeechDetector for FailingDetector {
+    fn window_size(&self) -> usize {
+        WINDOW
     }
-}
 
-// ---------------------------------------------------------------------------
-// state machine behaviour
-// ---------------------------------------------------------------------------
+    fn probability(&mut self, _window: &[f32]) -> Result<f32, SegmentError> {
+        Err(SegmentError::Onnx("inference failed".into()))
+    }
 
-#[test]
-fn silence_only_yields_no_segments() {
-    let samples = silence(SR as usize * 10);
-    let segs = segment_with(default_config(), &samples);
-    assert!(segs.is_empty(), "expected no segments, got {segs:?}");
-    assert_invariants(&segs, samples.len());
+    fn reset(&mut self) {}
 }
 
 #[test]
-fn single_burst_yields_one_segment_with_right_bounds() {
-    let lead = SR as usize; // 1 s
-    let burst = SR as usize * 5; // 5 s
-    let mut samples = silence(lead);
-    samples.extend(speech(burst));
-    samples.extend(silence(SR as usize));
-
-    let segs = segment_with(default_config(), &samples);
-    assert_invariants(&segs, samples.len());
-    assert_eq!(segs.len(), 1, "expected exactly one segment, got {segs:?}");
-
-    let seg = segs[0];
-    let pad = ms(30);
-    let tol = 2 * 512 + pad; // two detector windows of slop plus the padding
-
-    assert!(
-        seg.start_sample.abs_diff(lead) <= tol,
-        "start {} far from {lead}",
-        seg.start_sample
-    );
-    assert!(
-        seg.end_sample.abs_diff(lead + burst) <= tol,
-        "end {} far from {}",
-        seg.end_sample,
-        lead + burst
-    );
-    let d = seg.duration_s(SR);
-    assert!((4.5..=5.5).contains(&d), "duration {d} s not near 5 s");
+fn silence_yields_no_segments() {
+    assert!(segment(&silence(samples(10.0))).is_empty());
 }
 
 #[test]
-fn two_bursts_with_long_gap_yield_two_segments() {
-    // Gap of 1 s >> min_silence_duration_ms (100 ms).
-    let mut samples = silence(ms(500));
-    samples.extend(speech(SR as usize * 4));
-    samples.extend(silence(SR as usize));
-    samples.extend(speech(SR as usize * 4));
-    samples.extend(silence(ms(500)));
+fn a_single_burst_yields_one_segment_at_its_bounds() {
+    let (lead, burst) = (samples(1.0), samples(5.0));
+    let audio = concat(&[silence(lead), speech(burst), silence(samples(1.0))]);
 
-    let segs = segment_with(default_config(), &samples);
-    assert_invariants(&segs, samples.len());
-    assert_eq!(segs.len(), 2, "expected two segments, got {segs:?}");
-    for seg in &segs {
-        let d = seg.duration_s(SR);
-        assert!((3.5..=4.5).contains(&d), "segment duration {d} s off");
+    let segments = segment(&audio);
+
+    let tolerance = 2 * WINDOW + ms(SegmentConfig::default().speech_pad_ms);
+    assert_eq!(segments.len(), 1);
+    assert!(segments[0].start_sample.abs_diff(lead) <= tolerance);
+    assert!(segments[0].end_sample.abs_diff(lead + burst) <= tolerance);
+}
+
+#[test]
+fn a_long_gap_separates_two_segments() {
+    let audio = concat(&[
+        silence(ms(500)),
+        speech(samples(4.0)),
+        silence(samples(1.0)),
+        speech(samples(4.0)),
+        silence(ms(500)),
+    ]);
+
+    let segments = segment(&audio);
+
+    assert_eq!(segments.len(), 2);
+    for segment in segments {
+        assert!((3.5..=4.5).contains(&segment.duration_s(SAMPLE_RATE)));
     }
 }
 
 #[test]
-fn two_bursts_with_short_gap_merge_into_one() {
-    // Gap of 50 ms < min_silence_duration_ms (100 ms): the hysteresis payoff.
-    let mut samples = silence(ms(500));
-    samples.extend(speech(SR as usize * 4));
-    samples.extend(silence(ms(50)));
-    samples.extend(speech(SR as usize * 4));
-    samples.extend(silence(ms(500)));
+fn a_gap_shorter_than_min_silence_is_bridged() {
+    let audio = concat(&[
+        silence(ms(500)),
+        speech(samples(4.0)),
+        silence(ms(50)),
+        speech(samples(4.0)),
+        silence(ms(500)),
+    ]);
 
-    let segs = segment_with(default_config(), &samples);
-    assert_invariants(&segs, samples.len());
-    assert_eq!(
-        segs.len(),
-        1,
-        "short gap should merge into one segment, got {segs:?}"
-    );
-    let d = segs[0].duration_s(SR);
-    assert!((7.5..=8.6).contains(&d), "merged duration {d} s not near 8 s");
+    let segments = segment(&audio);
+
+    assert_eq!(segments.len(), 1);
+    assert!((7.5..=8.6).contains(&segments[0].duration_s(SAMPLE_RATE)));
 }
 
 #[test]
-fn burst_shorter_than_min_speech_duration_is_dropped() {
-    // 150 ms of speech < min_speech_duration_ms (250 ms).
-    let mut samples = silence(SR as usize);
-    samples.extend(speech(ms(150)));
-    samples.extend(silence(SR as usize));
+fn bursts_below_the_length_floors_are_dropped() {
+    let shorter_than_min_speech = ms(150);
+    let shorter_than_min_segment = samples(1.0);
 
-    let segs = segment_with(default_config(), &samples);
-    assert!(segs.is_empty(), "short burst should be dropped, got {segs:?}");
-}
-
-#[test]
-fn burst_between_min_speech_and_min_segment_is_dropped_at_the_end() {
-    // 1 s of speech passes min_speech_duration_ms (250 ms) but fails
-    // min_segment_s (3 s), so it is dropped by the final length gate.
-    let mut samples = silence(SR as usize);
-    samples.extend(speech(SR as usize));
-    samples.extend(silence(SR as usize));
-
-    let segs = segment_with(default_config(), &samples);
-    assert!(
-        segs.is_empty(),
-        "1 s segment should fail min_segment_s, got {segs:?}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// splitting
-// ---------------------------------------------------------------------------
-
-#[test]
-fn sixty_second_burst_splits_into_bounded_segments() {
-    let samples = speech(SR as usize * 60);
-    let cfg = default_config();
-    let max_samples = (cfg.max_segment_s * SR as f32) as usize;
-
-    let segs = segment_with(cfg, &samples);
-    assert_invariants(&segs, samples.len());
-    assert!(
-        segs.len() >= 2,
-        "60 s of speech must split, got {} segment(s)",
-        segs.len()
-    );
-    for seg in &segs {
-        assert!(
-            seg.len_samples() <= max_samples,
-            "segment {seg:?} exceeds max_segment_s ({} > {max_samples})",
-            seg.len_samples()
-        );
-        assert!(
-            seg.duration_s(SR) >= 3.0,
-            "split produced a segment below min_segment_s: {} s",
-            seg.duration_s(SR)
-        );
+    for burst in [shorter_than_min_speech, shorter_than_min_segment] {
+        let audio = concat(&[silence(samples(1.0)), speech(burst), silence(samples(1.0))]);
+        assert!(segment(&audio).is_empty(), "{burst} samples");
     }
 }
 
 #[test]
-fn long_burst_splits_at_the_interior_silence() {
-    // 40 s of speech with a single 50 ms dip at t = 20 s. The dip is shorter
-    // than min_silence_duration_ms so it does not end the segment, but it is
-    // the longest interior silence and must become the split point.
-    let half = SR as usize * 20;
-    let dip = ms(50);
-    let mut samples = speech(half);
-    samples.extend(silence(dip));
-    samples.extend(speech(half));
+fn continuous_speech_is_split_to_the_length_bounds() {
+    let config = SegmentConfig::default();
+    let segments = segment(&speech(samples(60.0)));
 
-    let segs = segment_with(default_config(), &samples);
-    assert_invariants(&segs, samples.len());
-    assert_eq!(segs.len(), 2, "expected a split at the dip, got {segs:?}");
-
-    let cut = segs[0].end_sample;
-    let expected = half + dip / 2;
-    assert!(
-        cut.abs_diff(expected) <= 4 * 512,
-        "split at {cut}, expected near {expected}"
-    );
-}
-
-// ---------------------------------------------------------------------------
-// padding and edges
-// ---------------------------------------------------------------------------
-
-#[test]
-fn padding_clamps_at_both_buffer_edges() {
-    // Speech occupies the entire buffer: padding must not underflow at 0 nor
-    // run past the end.
-    let samples = speech(SR as usize * 5);
-    let segs = segment_with(default_config(), &samples);
-    assert_invariants(&segs, samples.len());
-    assert_eq!(segs.len(), 1);
-    assert_eq!(segs[0].start_sample, 0, "start must clamp to 0");
-    assert!(
-        segs[0].end_sample <= samples.len(),
-        "end must clamp to buffer length"
-    );
-}
-
-#[test]
-fn padding_is_actually_applied() {
-    let lead = SR as usize;
-    let mut samples = silence(lead);
-    samples.extend(speech(SR as usize * 5));
-    samples.extend(silence(SR as usize));
-
-    let padded = segment_with(default_config(), &samples);
-    let unpadded = segment_with(
-        SegmentConfig {
-            speech_pad_ms: 0,
-            ..default_config()
-        },
-        &samples,
-    );
-
-    assert_eq!(padded.len(), 1);
-    assert_eq!(unpadded.len(), 1);
-    assert!(
-        padded[0].start_sample < unpadded[0].start_sample,
-        "padding should move the start earlier: {padded:?} vs {unpadded:?}"
-    );
-    assert!(
-        padded[0].end_sample > unpadded[0].end_sample,
-        "padding should move the end later: {padded:?} vs {unpadded:?}"
-    );
-    assert_eq!(
-        unpadded[0].start_sample - padded[0].start_sample,
-        ms(30),
-        "start padding should equal speech_pad_ms"
-    );
-}
-
-#[test]
-fn empty_input_yields_no_segments() {
-    let segs = segment_with(default_config(), &[]);
-    assert!(segs.is_empty());
-}
-
-#[test]
-fn input_shorter_than_one_window_does_not_panic() {
-    for n in [1usize, 2, 100, 511] {
-        let segs = segment_with(default_config(), &speech(n));
-        assert!(segs.is_empty(), "n={n} produced {segs:?}");
-        let segs = segment_with(default_config(), &silence(n));
-        assert!(segs.is_empty(), "n={n} silence produced {segs:?}");
+    assert!(segments.len() >= 2);
+    for segment in segments {
+        let duration = segment.duration_s(SAMPLE_RATE);
+        assert!((config.min_segment_s..=config.max_segment_s).contains(&duration));
     }
 }
 
 #[test]
-fn exactly_one_window_does_not_panic() {
-    let segs = segment_with(default_config(), &speech(512));
-    assert_invariants(&segs, 512);
+fn a_long_segment_is_cut_at_its_bridged_silence() {
+    let (half, dip) = (samples(20.0), ms(50));
+    let audio = concat(&[speech(half), silence(dip), speech(half)]);
+
+    let segments = segment(&audio);
+
+    assert_eq!(segments.len(), 2);
+    assert!(segments[0].end_sample.abs_diff(half + dip / 2) <= 4 * WINDOW);
+    assert_eq!(segments[0].end_sample, segments[1].start_sample);
 }
 
-// ---------------------------------------------------------------------------
-// detector behaviour
-// ---------------------------------------------------------------------------
+#[test]
+fn splitting_can_be_disabled() {
+    let config = SegmentConfig {
+        max_segment_s: 0.0,
+        ..SegmentConfig::default()
+    };
+    assert_eq!(segment_with(config, &speech(samples(60.0))).len(), 1);
+}
 
 #[test]
-fn energy_detector_saturates_for_speech_and_silence() {
-    let mut d = EnergyDetector::new(SR);
-    assert_eq!(d.window_size(), 512);
+fn padding_extends_both_ends_and_clamps_to_the_buffer() {
+    let audio = concat(&[
+        silence(samples(1.0)),
+        speech(samples(5.0)),
+        silence(samples(1.0)),
+    ]);
+    let unpadded = SegmentConfig {
+        speech_pad_ms: 0,
+        ..SegmentConfig::default()
+    };
 
-    let loud = speech(512);
-    let p_loud = d.probability(&loud);
-    assert!(p_loud > 0.95, "loud audio scored {p_loud}, expected ~1.0");
+    let padded = segment(&audio)[0];
+    let bare = segment_with(unpadded, &audio)[0];
+    let pad = ms(SegmentConfig::default().speech_pad_ms);
 
-    let quiet = silence(512);
-    let p_quiet = d.probability(&quiet);
-    assert!(p_quiet < 0.05, "silence scored {p_quiet}, expected ~0.0");
+    assert_eq!(bare.start_sample - padded.start_sample, pad);
+    assert_eq!(padded.end_sample - bare.end_sample, pad);
+
+    let edge_to_edge = segment(&speech(samples(5.0)));
+    assert_eq!(edge_to_edge[0].start_sample, 0);
+}
+
+#[test]
+fn padding_wider_than_a_gap_does_not_make_segments_overlap() {
+    let config = SegmentConfig {
+        speech_pad_ms: 400,
+        ..SegmentConfig::default()
+    };
+    let audio = concat(&[speech(samples(4.0)), silence(ms(300)), speech(samples(4.0))]);
+
+    assert_eq!(segment_with(config, &audio).len(), 2);
+}
+
+#[test]
+fn input_shorter_than_one_window_yields_no_segments() {
+    for len in [0, 1, 100, WINDOW - 1] {
+        assert!(segment(&speech(len)).is_empty(), "{len} samples");
+    }
+}
+
+#[test]
+fn detector_errors_abort_segmentation() {
+    let mut segmenter = Segmenter::new(FailingDetector, SegmentConfig::default());
+    let result = segmenter.segment(&speech(samples(1.0)));
+    assert!(matches!(result, Err(SegmentError::Onnx(_))));
+}
+
+#[test]
+fn energy_detector_separates_speech_from_silence() {
+    let mut detector = EnergyDetector::new(SAMPLE_RATE);
+    assert!(detector.probability(&speech(WINDOW)).unwrap() > 0.95);
+    assert_eq!(detector.probability(&silence(WINDOW)).unwrap(), 0.0);
 }
 
 #[test]
 fn energy_detector_threshold_is_configurable() {
-    let quiet: Vec<f32> = (0..512).map(|i| 0.001 * (i as f32 * 0.1).sin()).collect();
-    let mut strict = EnergyDetector::new(SR);
-    let mut lenient = EnergyDetector::with_threshold_dbfs(SR, -80.0);
-    assert!(lenient.probability(&quiet) > strict.probability(&quiet));
+    let faint = tone(SAMPLE_RATE, 255.0, 0.001, WINDOW);
+    let mut default = EnergyDetector::new(SAMPLE_RATE);
+    let mut lenient = EnergyDetector::with_threshold_dbfs(SAMPLE_RATE, -80.0);
+    assert!(lenient.probability(&faint).unwrap() > default.probability(&faint).unwrap());
 }
 
 #[test]
-fn energy_detector_uses_256_samples_at_8k() {
-    assert_eq!(EnergyDetector::new(8_000).window_size(), 256);
-    assert_eq!(EnergyDetector::new(16_000).window_size(), 512);
+fn energy_detector_window_tracks_the_sample_rate() {
+    for (sample_rate, window) in [(8_000, 256), (16_000, 512), (48_000, 1536)] {
+        assert_eq!(EnergyDetector::new(sample_rate).window_size(), window);
+    }
 }
 
 #[test]
-fn segment_helpers() {
-    let s = Segment {
+fn segment_reports_its_length() {
+    let segment = Segment {
         start_sample: 1_000,
         end_sample: 17_000,
     };
-    assert_eq!(s.len_samples(), 16_000);
-    assert!((s.duration_s(16_000) - 1.0).abs() < f32::EPSILON);
-    assert_eq!(s.duration_s(0), 0.0);
+    assert_eq!(segment.len_samples(), 16_000);
+    assert_eq!(segment.duration_s(16_000), 1.0);
+    assert_eq!(segment.duration_s(0), 0.0);
 }
 
 #[test]
-fn default_config_matches_silero_documented_defaults() {
-    let c = SegmentConfig::default();
-    assert_eq!(c.sample_rate, 16_000);
-    assert!((c.threshold - 0.5).abs() < f32::EPSILON);
-    assert!((c.neg_threshold - 0.35).abs() < 1e-6);
-    assert_eq!(c.min_speech_duration_ms, 250);
-    assert_eq!(c.min_silence_duration_ms, 100);
-    assert_eq!(c.speech_pad_ms, 30);
-    assert!((c.min_segment_s - 3.0).abs() < f32::EPSILON);
-    assert!((c.max_segment_s - 30.0).abs() < f32::EPSILON);
-
-    // neg_threshold derivation: max(threshold - 0.15, 0.01)
+fn with_threshold_derives_the_exit_threshold_like_silero() {
     assert!((SegmentConfig::with_threshold(0.5).neg_threshold - 0.35).abs() < 1e-6);
     assert!((SegmentConfig::with_threshold(0.1).neg_threshold - 0.01).abs() < 1e-6);
+    assert_eq!(
+        SegmentConfig::default().neg_threshold,
+        SegmentConfig::with_threshold(SegmentConfig::default().threshold).neg_threshold
+    );
 }
 
-// ---------------------------------------------------------------------------
-// property tests
-// ---------------------------------------------------------------------------
-
-/// Detector that ignores the audio entirely and replays a deterministic
-/// pseudo-random probability sequence.
-///
-/// Decoupling the probabilities from the samples is the point: the state
-/// machine's invariants must hold for *any* detector behaviour, including one
-/// that flips between speech and silence every window. Seeding from proptest's
-/// generated value keeps each case reproducible, and `reset` rewinds the
-/// sequence so `segment` remains idempotent.
-struct MockDetector {
-    seed: u64,
-    rng: XorShift,
-    window: usize,
-}
-
-impl MockDetector {
-    fn new(seed: u64, window: usize) -> Self {
-        Self {
-            seed,
-            rng: XorShift::new(seed),
-            window,
-        }
-    }
-}
-
-impl SpeechDetector for MockDetector {
-    fn window_size(&self) -> usize {
-        self.window
-    }
-
-    fn probability(&mut self, _window: &[f32]) -> f32 {
-        self.rng.next_f32()
-    }
-
-    fn reset(&mut self) {
-        self.rng = XorShift::new(self.seed);
-    }
-}
-
-#[test]
-fn mock_detector_is_deterministic_across_resets() {
-    let mut d = MockDetector::new(42, 512);
-    let buf = [0.0f32; 512];
-    let first: Vec<f32> = (0..16).map(|_| d.probability(&buf)).collect();
-    d.reset();
-    let second: Vec<f32> = (0..16).map(|_| d.probability(&buf)).collect();
-    assert_eq!(first, second);
-}
-
-proptest::proptest! {
-    #![proptest_config(proptest::prelude::ProptestConfig::with_cases(256))]
-
-    /// For arbitrary audio and arbitrary detector behaviour, emitted segments
-    /// are ordered by start, non-overlapping, non-empty, and inside the buffer.
+proptest! {
     #[test]
-    fn segments_are_ordered_disjoint_and_in_bounds(
+    fn any_detector_output_yields_well_formed_bounded_segments(
         len in 0usize..40_000,
-        seed in proptest::prelude::any::<u64>(),
-        amplitude in 0.0f32..1.0,
+        seed in any::<u64>(),
     ) {
-        let mut noise = XorShift::new(seed ^ 0xA5A5_A5A5);
-        let samples: Vec<f32> = (0..len)
-            .map(|_| (noise.next_f32() * 2.0 - 1.0) * amplitude)
+        let config = short_clip_config();
+        let max_len = samples(config.max_segment_s);
+
+        let segments = Segmenter::new(ScriptedDetector::new(seed), config)
+            .segment(&silence(len))
+            .unwrap();
+
+        assert_well_formed(&segments, len);
+        prop_assert!(segments.iter().all(|segment| segment.len_samples() <= max_len));
+    }
+
+    #[test]
+    fn energy_driven_segments_respect_the_default_bounds(
+        blocks in prop::collection::vec((0.0f32..0.6, 1usize..8), 0..40),
+    ) {
+        let audio: Vec<f32> = blocks
+            .into_iter()
+            .flat_map(|(amplitude, quarter_seconds)| {
+                tone(SAMPLE_RATE, 220.0, amplitude, quarter_seconds * samples(0.25))
+            })
             .collect();
+        let max_len = samples(SegmentConfig::default().max_segment_s);
 
-        let mut s = Segmenter::new(
-            MockDetector::new(seed, 512),
-            SegmentConfig {
-                sample_rate: SR,
-                // Loosen the length gates so the property exercises many
-                // segments rather than filtering almost everything away.
-                min_segment_s: 0.05,
-                max_segment_s: 0.5,
-                ..Default::default()
-            },
-        );
-        let segs = s.segment(&samples);
+        let segments = segment(&audio);
 
-        let mut prev_end = 0usize;
-        for seg in &segs {
-            proptest::prop_assert!(seg.end_sample > seg.start_sample);
-            proptest::prop_assert!(seg.end_sample <= samples.len());
-            proptest::prop_assert!(seg.start_sample >= prev_end);
-            prev_end = seg.end_sample;
-        }
+        prop_assert!(segments.iter().all(|segment| segment.len_samples() <= max_len));
     }
 
-    /// The same property with the shipped default config, and with real
-    /// energy-driven probabilities rather than a mock.
     #[test]
-    fn energy_detector_segments_hold_invariants(
-        blocks in proptest::collection::vec((0.0f32..0.6, 1usize..8), 0..40),
-    ) {
-        let mut samples: Vec<f32> = Vec::new();
-        for (amp, quarter_seconds) in blocks {
-            let n = quarter_seconds * (SR as usize / 4);
-            let start = samples.len();
-            samples.extend((0..n).map(|i| {
-                let t = (start + i) as f32 / SR as f32;
-                amp * (220.0 * std::f32::consts::TAU * t).sin()
-            }));
-        }
-
-        let segs = segment_with(default_config(), &samples);
-        let max_samples = (30.0 * SR as f32) as usize;
-
-        let mut prev_end = 0usize;
-        for seg in &segs {
-            proptest::prop_assert!(seg.end_sample > seg.start_sample);
-            proptest::prop_assert!(seg.end_sample <= samples.len());
-            proptest::prop_assert!(seg.start_sample >= prev_end);
-            proptest::prop_assert!(seg.len_samples() <= max_samples);
-            prev_end = seg.end_sample;
-        }
-    }
-
-    /// Segmentation is idempotent: the detector reset at the top of `segment`
-    /// means a second call on the same buffer returns the same segments.
-    #[test]
-    fn segmentation_is_repeatable(
-        len in 0usize..20_000,
-        seed in proptest::prelude::any::<u64>(),
-    ) {
-        let mut noise = XorShift::new(seed);
-        let samples: Vec<f32> = (0..len).map(|_| noise.next_f32() * 2.0 - 1.0).collect();
-
-        let mut s = Segmenter::new(MockDetector::new(seed, 512), default_config());
-        let a = s.segment(&samples);
-        let b = s.segment(&samples);
-        proptest::prop_assert_eq!(a, b);
+    fn segmentation_is_repeatable(len in 0usize..20_000, seed in any::<u64>()) {
+        let audio = silence(len);
+        let mut segmenter = Segmenter::new(ScriptedDetector::new(seed), short_clip_config());
+        prop_assert_eq!(segmenter.segment(&audio).unwrap(), segmenter.segment(&audio).unwrap());
     }
 }

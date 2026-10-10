@@ -15,18 +15,16 @@ aerosieve-decode.workspace = true
 aerosieve-segment.workspace = true
 aerosieve-shard.workspace = true
 aerosieve-lexical.workspace = true
-crossbeam-channel.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-uuid.workspace = true
 
 [dev-dependencies]
+aerosieve-fixtures.workspace = true
 criterion.workspace = true
-sysinfo = "0.35"
 hound.workspace = true
+tempfile.workspace = true
 
 [[bench]]
 name = "pipeline_benchmark"
 harness = false
-path = "../../benches/pipeline_benchmark.rs"

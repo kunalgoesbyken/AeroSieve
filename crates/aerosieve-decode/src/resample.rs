@@ -1,21 +1,15 @@
-//! Band-limited sample-rate conversion to the canonical rate.
+//! Band-limited sample-rate conversion with rubato's `SincFixedIn`.
 //!
-//! rubato's `SincFixedIn` is an FIR-based asynchronous resampler. Two facts
-//! about it drive the code below, and getting either wrong silently truncates
-//! the end of every file:
+//! Two properties of that resampler shape this module, and ignoring either
+//! silently corrupts the end of every file:
 //!
-//! 1. **Fixed input chunking.** `process` consumes exactly
-//!    `input_frames_next()` frames per call. A file is almost never an exact
-//!    multiple of that, so the trailing partial chunk must be flushed with
-//!    `process_partial`, which zero-pads internally.
-//! 2. **Filter latency.** The sinc filter is centered, so the first
-//!    `output_delay()` output frames are the filter ramping up on zeros. They
-//!    must be discarded, and an equal amount of extra output must be pulled out
-//!    of the resampler at the end to recover the real tail.
+//! - It consumes a fixed number of input frames per call, so the trailing
+//!   partial chunk has to go through `process_partial_into_buffer`.
+//! - Its filter is centered, so the first `output_delay()` output frames are
+//!   ramp-up on zeros. They are discarded, and the same amount of extra output
+//!   is flushed at the end to recover the real tail.
 //!
-//! The net effect is that we drop `output_delay()` frames from the front and
-//! truncate to the analytically expected length
-//! `round(input_len * target_rate / source_rate)`.
+//! The output is then exactly `round(input_len * to_rate / from_rate)` frames.
 
 use rubato::{
     Resampler, SincFixedIn, SincInterpolationParameters, SincInterpolationType, WindowFunction,
@@ -23,30 +17,16 @@ use rubato::{
 
 use crate::error::DecodeError;
 
-/// Input frames handed to the resampler per `process` call.
 const CHUNK_FRAMES: usize = 1024;
-
-/// Length of the windowed-sinc interpolation filter.
 const SINC_LEN: usize = 256;
+const OVERSAMPLING_FACTOR: usize = 256;
 
-fn params(ratio: f64) -> SincInterpolationParameters {
-    // Cutoff is relative to the lower of the two Nyquist frequencies. When
-    // downsampling, back the cutoff off slightly to keep the transition band
-    // inside the new Nyquist limit and avoid aliasing.
-    let f_cutoff = if ratio < 1.0 { 0.92 } else { 0.95 };
-    SincInterpolationParameters {
-        sinc_len: SINC_LEN,
-        f_cutoff,
-        oversampling_factor: 256,
-        interpolation: SincInterpolationType::Cubic,
-        window: WindowFunction::BlackmanHarris2,
-    }
-}
+/// Cutoff relative to Nyquist. Downsampling backs off further so the
+/// transition band stays inside the new Nyquist limit.
+const UPSAMPLE_CUTOFF: f32 = 0.95;
+const DOWNSAMPLE_CUTOFF: f32 = 0.92;
 
-/// Resample a mono signal from `from_rate` to `to_rate`.
-///
-/// Returns the input untouched when the rates already match. Preserves duration
-/// to within a sample: the output length is `round(len * to/from)`.
+/// Resample a mono signal, preserving its duration to within one sample.
 pub fn resample_mono(
     input: Vec<f32>,
     from_rate: u32,
@@ -57,62 +37,54 @@ pub fn resample_mono(
     }
 
     let ratio = f64::from(to_rate) / f64::from(from_rate);
-    let expected_len = ((input.len() as f64) * ratio).round() as usize;
+    let expected_len = (input.len() as f64 * ratio).round() as usize;
 
-    let mut resampler = SincFixedIn::<f32>::new(ratio, 1.0, params(ratio), CHUNK_FRAMES, 1)
-        .map_err(|e| DecodeError::Resample(e.to_string()))?;
-
+    let mut resampler =
+        SincFixedIn::<f32>::new(ratio, 1.0, sinc_parameters(ratio), CHUNK_FRAMES, 1)
+            .map_err(resample_error)?;
     let delay = resampler.output_delay();
-    // Room for the real signal plus the leading filter delay we will drop.
-    let mut out: Vec<f32> = Vec::with_capacity(expected_len + delay + CHUNK_FRAMES);
-
-    let mut pos = 0usize;
     let mut scratch = resampler.output_buffer_allocate(true);
+    let mut output = Vec::with_capacity(expected_len + delay + CHUNK_FRAMES);
 
-    // Full chunks.
-    loop {
-        let need = resampler.input_frames_next();
-        if pos + need > input.len() {
-            break;
+    for chunk in input.chunks(CHUNK_FRAMES) {
+        let (_, written) = if chunk.len() == CHUNK_FRAMES {
+            resampler.process_into_buffer(&[chunk], &mut scratch, None)
+        } else {
+            resampler.process_partial_into_buffer(Some(&[chunk]), &mut scratch, None)
         }
-        let chunk = [&input[pos..pos + need]];
-        let (_, written) = resampler
-            .process_into_buffer(&chunk, &mut scratch, None)
-            .map_err(|e| DecodeError::Resample(e.to_string()))?;
-        out.extend_from_slice(&scratch[0][..written]);
-        pos += need;
+        .map_err(resample_error)?;
+        output.extend_from_slice(&scratch[0][..written]);
     }
 
-    // Trailing partial chunk: `process_partial` zero-pads it to the required
-    // chunk size internally.
-    if pos < input.len() {
-        let chunk = [&input[pos..]];
-        let (_, written) = resampler
-            .process_partial_into_buffer(Some(&chunk), &mut scratch, None)
-            .map_err(|e| DecodeError::Resample(e.to_string()))?;
-        out.extend_from_slice(&scratch[0][..written]);
-    }
-
-    // Flush: keep pushing silence through until we have produced the delayed
-    // frames too, otherwise the last `delay` output samples of real audio are
-    // still sitting inside the filter.
-    let target = expected_len + delay;
-    while out.len() < target {
+    while output.len() < expected_len + delay {
         let (_, written) = resampler
             .process_partial_into_buffer::<&[f32], _>(None, &mut scratch, None)
-            .map_err(|e| DecodeError::Resample(e.to_string()))?;
+            .map_err(resample_error)?;
         if written == 0 {
             break;
         }
-        out.extend_from_slice(&scratch[0][..written]);
+        output.extend_from_slice(&scratch[0][..written]);
     }
 
-    // Drop the leading filter ramp-up, then trim to the analytic length.
-    let start = delay.min(out.len());
-    let mut out = out.split_off(start);
-    out.truncate(expected_len);
-    // If the resampler ran dry slightly early, pad so duration is exact.
-    out.resize(expected_len, 0.0);
+    output.drain(..delay.min(output.len()));
+    output.resize(expected_len, 0.0);
+    Ok(output)
+}
 
-    Ok(out)
+fn sinc_parameters(ratio: f64) -> SincInterpolationParameters {
+    SincInterpolationParameters {
+        sinc_len: SINC_LEN,
+        f_cutoff: if ratio < 1.0 {
+            DOWNSAMPLE_CUTOFF
+        } else {
+            UPSAMPLE_CUTOFF
+        },
+        oversampling_factor: OVERSAMPLING_FACTOR,
+        interpolation: SincInterpolationType::Cubic,
+        window: WindowFunction::BlackmanHarris2,
+    }
+}
+
+fn resample_error(error: impl std::fmt::Display) -> DecodeError {
+    DecodeError::Resample(error.to_string())
 }
