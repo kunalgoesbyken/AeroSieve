@@ -122,6 +122,8 @@ impl SegmentOutcome {
 pub struct FileOutcome {
     pub path: PathBuf,
     pub duration_s: f32,
+    /// Rate the segments are expressed in.
+    pub sample_rate: u32,
     pub source_sample_rate: u32,
     pub applied_gain_db: f32,
     pub segments: Vec<SegmentOutcome>,
@@ -187,10 +189,89 @@ impl PipelineStats {
     }
 }
 
-/// The curation pipeline, generic over how speech is detected.
-pub struct Pipeline<D: SpeechDetector = EnergyDetector> {
-    config: PipelineConfig,
+/// Decodes, segments, and scores audio without writing anything.
+///
+/// Use it to see how a policy judges recordings before a real run.
+/// [`Pipeline`] wraps one and adds transcript handling and shard output.
+pub struct Inspector<D: SpeechDetector = EnergyDetector> {
+    decode: DecodeConfig,
     segmenter: Segmenter<D>,
+    policy: FilterPolicy,
+}
+
+impl Inspector {
+    /// Build an inspector that detects speech by signal level.
+    pub fn new(
+        decode: DecodeConfig,
+        segment: SegmentConfig,
+        policy: FilterPolicy,
+    ) -> Result<Self, PipelineError> {
+        let detector = EnergyDetector::new(segment.sample_rate);
+        Self::with_detector(decode, segment, policy, detector)
+    }
+}
+
+impl<D: SpeechDetector> Inspector<D> {
+    /// Build an inspector around `detector`, which must expect audio at
+    /// `segment.sample_rate`.
+    pub fn with_detector(
+        decode: DecodeConfig,
+        segment: SegmentConfig,
+        policy: FilterPolicy,
+        detector: D,
+    ) -> Result<Self, PipelineError> {
+        ensure_matching_rates(decode.target_sample_rate, &segment)?;
+        Ok(Self {
+            decode,
+            segmenter: Segmenter::new(detector, segment),
+            policy,
+        })
+    }
+
+    /// Decode `path`, then segment and score it.
+    pub fn inspect_file(&mut self, path: &Path) -> Result<FileOutcome, PipelineError> {
+        let audio = aerosieve_decode::decode_file(path, &self.decode)?;
+        self.inspect_audio(path, &audio)
+    }
+
+    /// Segment and score audio that is already decoded.
+    pub fn inspect_audio(
+        &mut self,
+        source: &Path,
+        audio: &DecodedAudio,
+    ) -> Result<FileOutcome, PipelineError> {
+        ensure_matching_rates(audio.sample_rate, self.segmenter.config())?;
+
+        let segments = self
+            .segmenter
+            .segment(&audio.samples)?
+            .into_iter()
+            .map(|segment| {
+                let clip = &audio.samples[segment.start_sample..segment.end_sample];
+                let metrics = aerosieve_acoustic::score(clip, audio.sample_rate);
+                SegmentOutcome {
+                    segment,
+                    metrics,
+                    rejected: self.policy.evaluate(&metrics),
+                }
+            })
+            .collect();
+
+        Ok(FileOutcome {
+            path: source.to_path_buf(),
+            duration_s: audio.duration_s(),
+            sample_rate: audio.sample_rate,
+            source_sample_rate: audio.source_sample_rate,
+            applied_gain_db: audio.applied_gain_db,
+            segments,
+        })
+    }
+}
+
+/// The curation pipeline: an [`Inspector`] whose accepted clips are written
+/// to shards.
+pub struct Pipeline<D: SpeechDetector = EnergyDetector> {
+    inspector: Inspector<D>,
     rules: Option<RuleEngine>,
     writer: ShardWriter,
     stats: PipelineStats,
@@ -211,20 +292,18 @@ impl<D: SpeechDetector> Pipeline<D> {
     /// Fails if the ruleset cannot be loaded: silently skipping normalization
     /// would corrupt every transcript in the corpus.
     pub fn with_detector(config: PipelineConfig, detector: D) -> Result<Self, PipelineError> {
-        ensure_matching_rates(config.decode.target_sample_rate, &config.segment)?;
+        let inspector =
+            Inspector::with_detector(config.decode, config.segment, config.policy, detector)?;
         let rules = config
             .rules_path
             .as_deref()
             .map(RuleEngine::from_yaml_file)
             .transpose()?;
-        let segmenter = Segmenter::new(detector, config.segment.clone());
-        let writer = ShardWriter::new(config.shard.clone())?;
 
         Ok(Self {
-            config,
-            segmenter,
+            inspector,
             rules,
-            writer,
+            writer: ShardWriter::new(config.shard)?,
             stats: PipelineStats::default(),
         })
     }
@@ -235,7 +314,7 @@ impl<D: SpeechDetector> Pipeline<D> {
         path: &Path,
         transcript: Option<&str>,
     ) -> Result<FileOutcome, PipelineError> {
-        let audio = aerosieve_decode::decode_file(path, &self.config.decode)
+        let audio = aerosieve_decode::decode_file(path, &self.inspector.decode)
             .inspect_err(|_| self.stats.files_failed += 1)?;
         self.process_audio(path, &audio, transcript)
     }
@@ -279,40 +358,23 @@ impl<D: SpeechDetector> Pipeline<D> {
         audio: &DecodedAudio,
         transcript: Option<&str>,
     ) -> Result<FileOutcome, PipelineError> {
-        ensure_matching_rates(audio.sample_rate, &self.config.segment)?;
+        let outcome = self.inspector.inspect_audio(source, audio)?;
         let transcript = self.normalize(transcript.unwrap_or_default());
         let source_file = source.to_string_lossy();
 
-        let segments = self.segmenter.segment(&audio.samples)?;
-        let mut outcomes = Vec::with_capacity(segments.len());
-        for segment in segments {
-            let clip = &audio.samples[segment.start_sample..segment.end_sample];
-            let duration_s = segment.duration_s(audio.sample_rate);
-            let metrics = aerosieve_acoustic::score(clip, audio.sample_rate);
-            let rejected = self.config.policy.evaluate(&metrics);
-
-            if rejected.is_none() {
+        for clip in &outcome.segments {
+            let duration_s = clip.segment.duration_s(audio.sample_rate);
+            if clip.accepted() {
                 let mut meta =
-                    SampleMeta::new(duration_s, audio.sample_rate).with_metrics(&metrics)?;
+                    SampleMeta::new(duration_s, audio.sample_rate).with_metrics(&clip.metrics)?;
                 meta.transcript = transcript.clone();
                 meta.source_file = Some(source_file.to_string());
-                self.writer.write_sample(clip, meta)?;
+                let samples = &audio.samples[clip.segment.start_sample..clip.segment.end_sample];
+                self.writer.write_sample(samples, meta)?;
             }
-            self.stats.record(duration_s, rejected);
-            outcomes.push(SegmentOutcome {
-                segment,
-                metrics,
-                rejected,
-            });
+            self.stats.record(duration_s, clip.rejected);
         }
-
-        Ok(FileOutcome {
-            path: source.to_path_buf(),
-            duration_s: audio.duration_s(),
-            source_sample_rate: audio.source_sample_rate,
-            applied_gain_db: audio.applied_gain_db,
-            segments: outcomes,
-        })
+        Ok(outcome)
     }
 
     fn normalize(&self, transcript: &str) -> String {

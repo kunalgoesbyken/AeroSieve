@@ -45,7 +45,7 @@ impl std::fmt::Display for RejectReason {
 
 /// Thresholds a buffer must meet to be kept.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct FilterPolicy {
     /// WADA-SNR floor, in dB. WADA reads a few dB low on real speech, so this
     /// default keeps speech with roughly 15 dB or more of true SNR. It is

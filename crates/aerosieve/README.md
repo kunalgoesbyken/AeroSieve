@@ -18,6 +18,7 @@ println!("retention {:.1}%", stats.retention_rate() * 100.0);
 
 - `process_file` decodes a file first; `process_audio` takes samples that are already decoded.
 - Each call returns a `FileOutcome` listing every segment with its metrics and, if it was rejected, the reason.
+- `Inspector` does the same decoding, segmenting, and scoring without writing anything.
 - `finish` commits the last shard and returns `PipelineStats`, including rejections counted by reason.
 - `Pipeline::new` detects speech by signal level. `Pipeline::with_detector` accepts any `SpeechDetector`, such as `SileroDetector` under the `silero` feature.
 
@@ -30,6 +31,5 @@ The stage crates are re-exported as `aerosieve::{acoustic, decode, lexical, segm
 ```bash
 cargo run --release --example basic
 cargo run --release --example report
-cargo run --release --example inspect -- recording.wav
 cargo bench --bench pipeline_benchmark
 ```
