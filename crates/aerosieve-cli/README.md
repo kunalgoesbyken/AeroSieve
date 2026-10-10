@@ -3,7 +3,7 @@
 The `aerosieve` command-line tool.
 
 ```bash
-cargo install --path crates/aerosieve-cli
+cargo install aerosieve-cli
 ```
 
 | Command | What it does |
