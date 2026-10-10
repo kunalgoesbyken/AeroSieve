@@ -23,7 +23,8 @@
 //!
 //! The published table in the reference implementation is a Monte-Carlo
 //! tabulation of that model. This table was regenerated the same way rather
-//! than transcribed, so its provenance is reproducible:
+//! than transcribed. The generator is not part of this repository; the
+//! procedure was:
 //!
 //! - draw `N = 2e7` clean samples `s` with `|s| ~ Gamma(shape = 0.4, scale = 1)`
 //!   and a uniformly random sign,

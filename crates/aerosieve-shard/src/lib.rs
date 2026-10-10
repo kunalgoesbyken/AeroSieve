@@ -98,6 +98,8 @@ pub enum ShardError {
     Wav(#[from] hound::Error),
     #[error("metadata serialization error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("sample metadata declares a sample rate of zero")]
+    ZeroSampleRate,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -197,6 +199,10 @@ impl ShardWriter {
         samples: &[f32],
         meta: SampleMeta,
     ) -> Result<String, ShardError> {
+        if meta.sample_rate == 0 {
+            return Err(ShardError::ZeroSampleRate);
+        }
+        let wav = encode_wav_i16(samples, meta.sample_rate)?;
         if self
             .open
             .as_ref()
@@ -217,7 +223,6 @@ impl ShardWriter {
             shard: shard.name.clone(),
             meta,
         };
-        let wav = encode_wav_i16(samples, record.meta.sample_rate)?;
         shard.append(&format!("{}.wav", record.key), &wav)?;
         shard.append(
             &format!("{}.json", record.key),

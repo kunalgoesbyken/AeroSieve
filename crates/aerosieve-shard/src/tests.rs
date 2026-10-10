@@ -199,6 +199,19 @@ fn metrics_must_serialize_to_an_object() {
 }
 
 #[test]
+fn a_zero_sample_rate_is_rejected_without_leaving_an_empty_shard() {
+    let workspace = Workspace::new();
+    let mut writer = workspace.writer();
+
+    let result = writer.write_sample(&audio(160), SampleMeta::new(0.01, 0));
+    let stats = writer.finish().unwrap();
+
+    assert!(matches!(result, Err(ShardError::ZeroSampleRate)));
+    assert_eq!(stats, ShardStats::default());
+    assert!(workspace.shard_paths().is_empty());
+}
+
+#[test]
 fn shards_roll_over_without_splitting_a_sample() {
     const SAMPLES: usize = 60;
     let workspace = Workspace::new();
