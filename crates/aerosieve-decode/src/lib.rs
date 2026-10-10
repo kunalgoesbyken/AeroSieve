@@ -73,6 +73,9 @@ pub struct DecodeConfig {
     /// Largest gain normalization may apply in either direction, in dB.
     pub max_gain_db: f32,
     pub normalize: bool,
+    /// Refuse audio longer than this many seconds. The limit is enforced
+    /// while decoding, so a small compressed file cannot expand without bound.
+    pub max_duration_s: Option<f32>,
 }
 
 impl Default for DecodeConfig {
@@ -82,6 +85,7 @@ impl Default for DecodeConfig {
             target_dbfs: -20.0,
             max_gain_db: 3.0,
             normalize: true,
+            max_duration_s: None,
         }
     }
 }
@@ -167,7 +171,7 @@ fn decode_source(
 
     let mut format = probe(source, extension_hint)?;
     let track = select_track(format.as_ref())?;
-    let mono = decode_to_mono(format.as_mut(), &track)?;
+    let mono = decode_to_mono(format.as_mut(), &track, config.max_duration_s)?;
 
     let mut samples =
         resample::resample_mono(mono.samples, track.sample_rate, config.target_sample_rate)?;
@@ -238,7 +242,13 @@ fn select_track(format: &dyn FormatReader) -> Result<Track, DecodeError> {
 ///
 /// Malformed packets are skipped, which is symphonia's documented recovery
 /// path; only unrecoverable errors abort the file.
-fn decode_to_mono(format: &mut dyn FormatReader, track: &Track) -> Result<MonoTrack, DecodeError> {
+fn decode_to_mono(
+    format: &mut dyn FormatReader,
+    track: &Track,
+    max_duration_s: Option<f32>,
+) -> Result<MonoTrack, DecodeError> {
+    let max_frames =
+        max_duration_s.map(|limit_s| (f64::from(limit_s) * f64::from(track.sample_rate)) as usize);
     let mut decoder = symphonia::default::get_codecs()
         .make(&track.codec, &DecoderOptions::default())
         .map_err(|error| DecodeError::UnsupportedFormat(error.to_string()))?;
@@ -280,6 +290,11 @@ fn decode_to_mono(format: &mut dyn FormatReader, track: &Track) -> Result<MonoTr
                 .chunks_exact(channels)
                 .map(|frame| frame.iter().sum::<f32>() / channels as f32),
         );
+        if let (Some(max_frames), Some(limit_s)) = (max_frames, max_duration_s)
+            && samples.len() > max_frames
+        {
+            return Err(DecodeError::TooLong { limit_s });
+        }
     }
 
     Ok(MonoTrack {

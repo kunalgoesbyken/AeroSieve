@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-RUN apt-get update     && apt-get install -y --no-install-recommends build-essential curl git libsndfile1     && rm -rf /var/lib/apt/lists/*
+RUN apt-get update     && apt-get install -y --no-install-recommends build-essential curl git     && rm -rf /var/lib/apt/lists/*
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
 ENV PATH="/root/.cargo/bin:${PATH}"
 

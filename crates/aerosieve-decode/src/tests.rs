@@ -239,6 +239,22 @@ fn implausible_source_sample_rates_are_rejected() {
 }
 
 #[test]
+fn audio_over_the_duration_limit_is_refused() {
+    let config = DecodeConfig {
+        max_duration_s: Some(1.0),
+        ..DecodeConfig::default()
+    };
+    let within = wav_bytes(&tone(44_100, 440.0, 0.1, 44_100), 44_100, 1);
+    let over = wav_bytes(&tone(44_100, 440.0, 0.1, 88_200), 44_100, 1);
+
+    assert!(decode_reader(Cursor::new(within), None, &config).is_ok());
+    assert!(matches!(
+        decode_reader(Cursor::new(over), None, &config),
+        Err(DecodeError::TooLong { .. })
+    ));
+}
+
+#[test]
 fn zero_target_sample_rate_is_rejected() {
     let config = DecodeConfig {
         target_sample_rate: 0,

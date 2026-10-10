@@ -2,9 +2,7 @@
 
 import aerosieve
 import gradio as gr
-import numpy as np
 from matplotlib.figure import Figure
-import soundfile as sf
 
 ACCEPTED = "accept"
 ACCEPT_COLOR = "#2e7d32"
@@ -15,22 +13,12 @@ MAX_DURATION_S = 600
 COLUMNS = ["start (s)", "length (s)", "SNR (dB)", "level (dBFS)", "clipping", "flatness", "verdict"]
 
 
-def waveform_envelope(path):
-    """Peak envelope of the recording, reduced to a plottable number of points."""
-    samples, sample_rate = sf.read(path, dtype="float32", always_2d=True)
-    mono = np.abs(samples.mean(axis=1))
-    bucket = max(1, len(mono) // MAX_PLOT_POINTS)
-    usable = len(mono) - len(mono) % bucket
-    envelope = mono[:usable].reshape(-1, bucket).max(axis=1)
-    times = np.arange(len(envelope)) * bucket / sample_rate
-    return times, envelope
-
-
-def plot_clips(path, clips):
-    times, envelope = waveform_envelope(path)
+def plot_clips(envelope, clips):
+    peaks = envelope["peaks"]
+    times = [index * envelope["step_s"] for index in range(len(peaks))]
     figure = Figure(figsize=(11, 2.8))
     axis = figure.subplots()
-    axis.fill_between(times, -envelope, envelope, color="#607d8b", linewidth=0)
+    axis.fill_between(times, [-peak for peak in peaks], peaks, color="#607d8b", linewidth=0)
     for clip in clips:
         color = ACCEPT_COLOR if clip["verdict"] == ACCEPTED else REJECT_COLOR
         axis.axvspan(clip["start_s"], clip["start_s"] + clip["duration_s"], color=color, alpha=0.25)
@@ -56,29 +44,24 @@ def clip_rows(clips):
     ]
 
 
-def ensure_within_duration_limit(path):
-    """Refuse recordings that would decode to more audio than the demo should hold."""
-    try:
-        duration_s = sf.info(path).duration
-    except sf.LibsndfileError as error:
-        raise gr.Error("This file could not be read as audio.") from error
-    if duration_s > MAX_DURATION_S:
-        raise gr.Error(f"Recordings are limited to {MAX_DURATION_S // 60} minutes in this demo.")
-
-
 def inspect(path, min_snr_db, min_spectral_flatness):
     if path is None:
         raise gr.Error("Upload or record some audio first.")
-    ensure_within_duration_limit(path)
     policy = {"min_snr_db": min_snr_db, "min_spectral_flatness": min_spectral_flatness}
     try:
-        clips = aerosieve.inspect(path, policy=policy)["clips"]
+        result = aerosieve.inspect(
+            path,
+            policy=policy,
+            max_duration_s=MAX_DURATION_S,
+            envelope_points=MAX_PLOT_POINTS,
+        )
     except RuntimeError as error:
         raise gr.Error(str(error)) from error
 
+    clips = result["clips"]
     accepted = sum(clip["verdict"] == ACCEPTED for clip in clips)
     summary = f"{accepted} of {len(clips)} clips accepted. Green spans are kept, red are rejected."
-    return plot_clips(path, clips), clip_rows(clips), summary
+    return plot_clips(result["envelope"], clips), clip_rows(clips), summary
 
 
 with gr.Blocks(title="AeroSieve") as demo:

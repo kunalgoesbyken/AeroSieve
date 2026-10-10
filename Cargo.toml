@@ -14,17 +14,17 @@ exclude = ["bindings/python"]
 
 [workspace.package]
 edition = "2024"
-version = "0.2.0"
+version = "0.3.0"
 license = "MIT"
 
 [workspace.dependencies]
 aerosieve-fixtures = { path = "crates/aerosieve-fixtures" }
-aerosieve-acoustic = { path = "crates/aerosieve-acoustic", version = "0.2.0" }
-aerosieve-decode = { path = "crates/aerosieve-decode", version = "0.2.0" }
-aerosieve-segment = { path = "crates/aerosieve-segment", version = "0.2.0" }
-aerosieve-shard = { path = "crates/aerosieve-shard", version = "0.2.0" }
-aerosieve-lexical = { path = "crates/aerosieve-lexical", version = "0.2.0" }
-aerosieve = { path = "crates/aerosieve", version = "0.2.0" }
+aerosieve-acoustic = { path = "crates/aerosieve-acoustic", version = "0.3.0" }
+aerosieve-decode = { path = "crates/aerosieve-decode", version = "0.3.0" }
+aerosieve-segment = { path = "crates/aerosieve-segment", version = "0.3.0" }
+aerosieve-shard = { path = "crates/aerosieve-shard", version = "0.3.0" }
+aerosieve-lexical = { path = "crates/aerosieve-lexical", version = "0.3.0" }
+aerosieve = { path = "crates/aerosieve", version = "0.3.0" }
 
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
@@ -36,6 +36,7 @@ tar = "0.4"
 regex = "1.11"
 hound = "3.5"
 clap = { version = "4", features = ["derive"] }
+libc = "0.2"
 criterion = "0.5"
 proptest = "1"
 tempfile = "3"

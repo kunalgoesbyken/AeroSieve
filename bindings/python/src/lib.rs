@@ -2,9 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
+use aerosieve::decode::decode_file;
 use aerosieve::{
-    DecodeConfig, FileOutcome, FilterPolicy, Inspector, Pipeline, PipelineConfig, PipelineError,
-    PipelineStats, QualityMetrics, SegmentConfig,
+    DecodeConfig, DecodedAudio, FileOutcome, FilterPolicy, Inspector, Pipeline, PipelineConfig,
+    PipelineError, PipelineStats, QualityMetrics, SegmentConfig,
 };
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -22,6 +23,32 @@ struct Clip {
     verdict: &'static str,
 }
 
+/// Peak amplitude per bucket of `step_s` seconds, for drawing a waveform.
+#[derive(Serialize)]
+struct Envelope {
+    step_s: f32,
+    peaks: Vec<f32>,
+}
+
+impl Envelope {
+    fn of(audio: &DecodedAudio, points: usize) -> Self {
+        let bucket = audio.samples.len().div_ceil(points.max(1)).max(1);
+        let peaks = audio
+            .samples
+            .chunks(bucket)
+            .map(|chunk| {
+                chunk
+                    .iter()
+                    .fold(0.0f32, |peak, sample| peak.max(sample.abs()))
+            })
+            .collect();
+        Self {
+            step_s: bucket as f32 / audio.sample_rate as f32,
+            peaks,
+        }
+    }
+}
+
 #[derive(Serialize)]
 struct Inspection {
     path: PathBuf,
@@ -29,6 +56,7 @@ struct Inspection {
     source_sample_rate: u32,
     applied_gain_db: f32,
     clips: Vec<Clip>,
+    envelope: Option<Envelope>,
 }
 
 impl From<FileOutcome> for Inspection {
@@ -49,6 +77,7 @@ impl From<FileOutcome> for Inspection {
             source_sample_rate: outcome.source_sample_rate,
             applied_gain_db: outcome.applied_gain_db,
             clips,
+            envelope: None,
         }
     }
 }
@@ -65,9 +94,22 @@ fn policy_from(overrides: Option<&Bound<'_, PyAny>>) -> PyResult<FilterPolicy> {
     depythonize(overrides).map_err(|error| PyValueError::new_err(error.to_string()))
 }
 
-fn inspect_file(path: &Path, policy: FilterPolicy) -> Result<Inspection, PipelineError> {
-    let mut inspector = Inspector::new(DecodeConfig::default(), SegmentConfig::default(), policy)?;
-    inspector.inspect_file(path).map(Inspection::from)
+fn inspect_file(
+    path: &Path,
+    policy: FilterPolicy,
+    max_duration_s: Option<f32>,
+    envelope_points: Option<usize>,
+) -> Result<Inspection, PipelineError> {
+    let decode = DecodeConfig {
+        max_duration_s,
+        ..DecodeConfig::default()
+    };
+    let audio = decode_file(path, &decode)?;
+    let mut inspector = Inspector::new(decode, SegmentConfig::default(), policy)?;
+
+    let mut inspection = Inspection::from(inspector.inspect_audio(path, &audio)?);
+    inspection.envelope = envelope_points.map(|points| Envelope::of(&audio, points));
+    Ok(inspection)
 }
 
 fn curate_files(
@@ -87,16 +129,22 @@ fn curate_files(
 /// Returns a dict with the file's duration and a `clips` list; each clip has
 /// `start_s`, `duration_s`, the four quality metrics, and a `verdict` that is
 /// either "accept" or the rejection reason.
+///
+/// `max_duration_s` refuses longer recordings while decoding, which matters
+/// when the file comes from an untrusted upload. `envelope_points` adds an
+/// `envelope` of about that many peak values for drawing a waveform.
 #[pyfunction]
-#[pyo3(signature = (path, policy=None))]
+#[pyo3(signature = (path, policy=None, *, max_duration_s=None, envelope_points=None))]
 fn inspect<'py>(
     py: Python<'py>,
     path: PathBuf,
     policy: Option<&Bound<'py, PyAny>>,
+    max_duration_s: Option<f32>,
+    envelope_points: Option<usize>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let policy = policy_from(policy)?;
     let inspection = py
-        .detach(|| inspect_file(&path, policy))
+        .detach(|| inspect_file(&path, policy, max_duration_s, envelope_points))
         .map_err(runtime_error)?;
     Ok(pythonize(py, &inspection)?)
 }

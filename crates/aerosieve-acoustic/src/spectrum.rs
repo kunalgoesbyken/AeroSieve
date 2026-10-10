@@ -40,7 +40,8 @@ pub fn spectral_flatness(samples: &[f32], sample_rate: u32) -> f32 {
     let mut total = 0.0f64;
     let mut frames = 0u32;
 
-    for frame in samples.chunks_exact(FLATNESS_FFT_SIZE) {
+    let (frames_of_samples, _partial) = samples.as_chunks::<FLATNESS_FFT_SIZE>();
+    for frame in frames_of_samples {
         for ((bin, sample), weight) in re.iter_mut().zip(frame).zip(&window) {
             *bin = sample * weight;
         }

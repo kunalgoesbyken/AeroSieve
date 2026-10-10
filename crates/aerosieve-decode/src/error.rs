@@ -28,6 +28,9 @@ pub enum DecodeError {
     #[error("audio track declares an unsupported sample rate of {0} Hz")]
     UnsupportedSampleRate(u32),
 
+    #[error("audio is longer than the configured limit of {limit_s} s")]
+    TooLong { limit_s: f32 },
+
     /// An unrecoverable error was raised while decoding packets.
     #[error("decode error: {0}")]
     Decode(String),

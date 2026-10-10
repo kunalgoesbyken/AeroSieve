@@ -32,6 +32,14 @@ Thresholds can be overridden; keys you leave out keep their defaults:
 aerosieve.inspect("recording.wav", policy={"min_snr_db": 15.0})
 ```
 
+Two keyword arguments help when the file comes from someone else:
+
+```python
+result = aerosieve.inspect("upload.mp3", max_duration_s=600, envelope_points=2000)
+```
+
+`max_duration_s` refuses longer recordings while they are being decoded. `envelope_points` adds `result["envelope"]`, about that many peak values spaced `step_s` seconds apart, for drawing a waveform.
+
 ## Curate a set of recordings
 
 ```python
