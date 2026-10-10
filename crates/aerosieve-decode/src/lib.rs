@@ -254,7 +254,9 @@ fn decode_to_mono(
         .map_err(|error| DecodeError::UnsupportedFormat(error.to_string()))?;
 
     let declared_frames = track.codec.n_frames.unwrap_or(0);
-    let mut samples = Vec::with_capacity(declared_frames.min(MAX_PREALLOCATED_FRAMES) as usize);
+    let reserved_frames = (declared_frames.min(MAX_PREALLOCATED_FRAMES) as usize)
+        .min(max_frames.unwrap_or(usize::MAX));
+    let mut samples = Vec::with_capacity(reserved_frames);
     let mut source_channels = track.codec.channels.map_or(0, |channels| channels.count());
     let mut interleaved: Option<SampleBuffer<f32>> = None;
 

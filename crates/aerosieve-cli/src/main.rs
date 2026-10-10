@@ -125,7 +125,8 @@ fn curate(args: &CurateArgs) -> CliResult<()> {
     let stats = pipeline.finish()?;
     println!(
         "{} files curated, {} skipped",
-        stats.files_processed, stats.files_failed
+        stats.files_processed,
+        files.len() as u64 - stats.files_processed
     );
     println!(
         "{} of {} clips accepted ({:.1}% of detected speech)",

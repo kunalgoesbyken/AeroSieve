@@ -14,17 +14,17 @@ exclude = ["bindings/python"]
 
 [workspace.package]
 edition = "2024"
-version = "0.3.0"
+version = "0.3.1"
 license = "MIT"
 
 [workspace.dependencies]
 aerosieve-fixtures = { path = "crates/aerosieve-fixtures" }
-aerosieve-acoustic = { path = "crates/aerosieve-acoustic", version = "0.3.0" }
-aerosieve-decode = { path = "crates/aerosieve-decode", version = "0.3.0" }
-aerosieve-segment = { path = "crates/aerosieve-segment", version = "0.3.0" }
-aerosieve-shard = { path = "crates/aerosieve-shard", version = "0.3.0" }
-aerosieve-lexical = { path = "crates/aerosieve-lexical", version = "0.3.0" }
-aerosieve = { path = "crates/aerosieve", version = "0.3.0" }
+aerosieve-acoustic = { path = "crates/aerosieve-acoustic", version = "0.3.1" }
+aerosieve-decode = { path = "crates/aerosieve-decode", version = "0.3.1" }
+aerosieve-segment = { path = "crates/aerosieve-segment", version = "0.3.1" }
+aerosieve-shard = { path = "crates/aerosieve-shard", version = "0.3.1" }
+aerosieve-lexical = { path = "crates/aerosieve-lexical", version = "0.3.1" }
+aerosieve = { path = "crates/aerosieve", version = "0.3.1" }
 
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
