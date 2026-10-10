@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Audio decoding, resampling, and loudness standardization for AeroSieve"
+repository = "https://github.com/kunalgoesbyken/AeroSieve"
+readme = "README.md"
+keywords = ["audio", "speech", "vad", "dataset", "webdataset"]
+categories = ["multimedia::audio"]
 
 [dependencies]
 aerosieve-acoustic.workspace = true

@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "WebDataset tar shard writer with atomic commit semantics"
+repository = "https://github.com/kunalgoesbyken/AeroSieve"
+readme = "README.md"
+keywords = ["audio", "speech", "vad", "dataset", "webdataset"]
+categories = ["multimedia::audio"]
 
 [dependencies]
 tar.workspace = true

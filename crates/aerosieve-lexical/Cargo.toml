@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Single-pass leftmost-longest transcript normalization driven by YAML rules"
+repository = "https://github.com/kunalgoesbyken/AeroSieve"
+readme = "README.md"
+keywords = ["text", "normalization", "transcript", "speech", "regex"]
+categories = ["text-processing"]
 
 [dependencies]
 regex.workspace = true
