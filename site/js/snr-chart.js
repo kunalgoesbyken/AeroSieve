@@ -60,7 +60,7 @@ const endLabels = (lines) =>
 const seriesGroup = (series, points, showTip) => {
   const group = svg("g", { style: `--color:${series.color}` });
   const path = points.map((p, i) => `${i ? "L" : "M"}${x(p.injected_snr_db)},${y(p.median_estimate_db)}`).join("");
-  group.append(svg("path", { d: path, class: "series-line" }));
+  group.append(svg("path", { d: path, class: "series-line", pathLength: 1 }));
   points.forEach((point) => {
     const cx = x(point.injected_snr_db);
     const cy = y(point.median_estimate_db);

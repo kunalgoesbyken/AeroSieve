@@ -18,7 +18,9 @@ mount("[data-hero]", mountHero);
 mount("[data-demo]", mountDemo);
 mount("[data-results]", mountResults);
 
-if ("IntersectionObserver" in window) {
+const prefersMotion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+if (prefersMotion && "IntersectionObserver" in window) {
   const reveal = new IntersectionObserver(
     (entries) =>
       entries.filter((entry) => entry.isIntersecting).forEach((entry) => {

@@ -41,7 +41,7 @@
           <h1><span>Keep the speech.</span> <span>Drop the rest.</span></h1>
           <p class="hero-lede">AeroSieve cuts raw recordings into 3–30 second clips, measures each one for noise, clipping, tones and silence, and writes the keepers as WebDataset shards. Every clip it throws away comes with a reason.</p>
           <div class="hero-actions">
-            <a class="button button-light" href="#demo">Try it in your browser</a>
+            <a class="button button-light" href="#demo">Try it in your browser<span class="nudge" aria-hidden="true">→</span></a>
             <button class="command" type="button" data-copy="cargo install aerosieve-cli">
               <span aria-hidden="true">$</span> cargo install aerosieve-cli
             </button>
@@ -131,7 +131,7 @@
         <div class="bento">
           <article class="feature span-4" data-reveal>
             <div class="mock mock-flow">
-              <div class="formats"><span>wav</span><span>mp3</span><span>flac</span><span>ogg</span><span>mp4</span></div>
+              <div class="formats stagger"><span>wav</span><span>mp3</span><span>flac</span><span>ogg</span><span>mp4</span></div>
               <span class="arrow" aria-hidden="true">→</span>
               <div class="target"><strong>16 kHz mono</strong><span>−20 dBFS, ±3 dB</span></div>
             </div>
@@ -147,14 +147,14 @@
             <p>WADA-SNR estimates noise from the clip alone. No clean copy needed.</p>
           </article>
           <article class="feature span-2" data-reveal>
-            <div class="mock mock-segments" aria-hidden="true">
-              <span style="--w:22%"></span><span style="--w:38%"></span><span style="--w:16%"></span>
+            <div class="mock mock-segments">
+              <svg viewBox="0 0 320 90" aria-hidden="true"><g class="clips stagger"><g><rect x="6" y="4" width="86" height="64"/><line x1="6" y1="5" x2="92" y2="5"/><text x="6" y="86">4.9 s</text></g><g><rect x="116" y="4" width="120" height="64"/><line x1="116" y1="5" x2="236" y2="5"/><text x="116" y="86">9.1 s</text></g><g><rect x="258" y="4" width="56" height="64"/><line x1="258" y1="5" x2="314" y2="5"/><text x="258" y="86">3.4 s</text></g></g><path class="wave" pathLength="1" d="M4 35.1V36.9M8 19.4V52.6M12 12.0V60.0M16 17.5V54.5M20 16.2V55.8M24 22.8V49.2M28 29.6V42.4M32 23.1V48.9M36 20.6V51.4M40 14.2V57.8M44 17.4V54.6M48 19.4V52.6M52 22.1V49.9M56 28.8V43.2M60 25.0V47.0M64 19.5V52.5M68 12.5V59.5M72 8.7V63.3M76 15.2V56.8M80 21.8V50.2M84 28.0V44.0M88 25.7V46.3M92 15.3V56.7M96 35.1V36.9M100 35.3V36.7M104 35.3V36.7M108 35.1V36.9M112 34.6V37.4M116 25.6V46.4M120 17.6V54.4M124 12.8V59.2M128 14.3V57.7M132 14.9V57.1M136 22.8V49.2M140 28.1V43.9M144 25.9V46.1M148 17.3V54.7M152 14.9V57.1M156 14.8V57.2M160 14.3V57.7M164 20.3V51.7M168 27.3V44.7M172 24.8V47.2M176 17.7V54.3M180 16.7V55.3M184 12.2V59.8M188 14.6V57.4M192 17.3V54.7M196 25.9V46.1M200 26.6V45.4M204 16.4V55.6M208 18.1V53.9M212 13.8V58.2M216 12.3V59.7M220 21.4V50.6M224 25.9V46.1M228 27.5V44.5M232 18.7V53.3M236 12.6V59.4M240 34.8V37.2M244 34.5V37.5M248 35.1V36.9M252 34.7V37.3M256 34.8V37.2M260 19.7V52.3M264 15.5V56.5M268 9.6V62.4M272 10.1V61.9M276 18.6V53.4M280 24.4V47.6M284 28.2V43.8M288 19.5V52.5M292 14.1V57.9M296 8.2V63.8M300 11.0V61.0M304 19.5V52.5M308 24.8V47.2M312 28.0V44.0M316 35.4V36.6"/></svg>
             </div>
             <h3>Clips of 3 to 30 seconds</h3>
             <p>A hysteresis VAD finds speech and cuts it where people pause. Silero VAD is optional.</p>
           </article>
           <article class="feature span-4" data-reveal>
-            <div class="mock mock-files">
+            <div class="mock mock-files stagger">
               <code>shard-000000.tar</code>
               <code>manifest.jsonl</code>
               <code>stats.json</code>
@@ -165,21 +165,21 @@
           </article>
           <article class="feature span-3" data-reveal>
             <div class="mock mock-clip">
-              <svg viewBox="0 0 160 60" aria-hidden="true"><path d="M0 30 C10 30 12 6 20 6 L34 6 C42 6 44 54 52 54 L66 54 C74 54 76 6 84 6 L98 6 C106 6 108 54 116 54 L130 54 C138 54 140 30 160 30"/><line x1="0" y1="6" x2="160" y2="6"/><line x1="0" y1="54" x2="160" y2="54"/></svg>
+              <svg viewBox="0 0 160 60" aria-hidden="true"><path pathLength="1" d="M0 30 C10 30 12 6 20 6 L34 6 C42 6 44 54 52 54 L66 54 C74 54 76 6 84 6 L98 6 C106 6 108 54 116 54 L130 54 C138 54 140 30 160 30"/><line x1="0" y1="6" x2="160" y2="6"/><line x1="0" y1="54" x2="160" y2="54"/></svg>
             </div>
             <h3>Clipping, even after leveling</h3>
             <p>Measured against the source's own full scale, so turning a file down can't hide it.</p>
           </article>
           <article class="feature span-3" data-reveal>
             <div class="mock mock-spectrum">
-              <div class="bars speech" aria-hidden="true"><i style="--h:40%"></i><i style="--h:70%"></i><i style="--h:55%"></i><i style="--h:80%"></i><i style="--h:50%"></i><i style="--h:62%"></i><i style="--h:45%"></i></div>
-              <div class="bars tone" aria-hidden="true"><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:95%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i></div>
+              <div class="bars speech stagger" aria-hidden="true"><i style="--h:40%"></i><i style="--h:70%"></i><i style="--h:55%"></i><i style="--h:80%"></i><i style="--h:50%"></i><i style="--h:62%"></i><i style="--h:45%"></i></div>
+              <div class="bars tone stagger" aria-hidden="true"><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:95%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i></div>
             </div>
             <h3>Tones and hum</h3>
             <p>Spectral flatness in the 300–3400 Hz band catches dial tones without flagging phone audio.</p>
           </article>
           <article class="feature span-6 feature-wide" data-reveal>
-            <div class="mock mock-limits">
+            <div class="mock mock-limits stagger">
               <span>max_duration_s enforced while decoding</span>
               <span>allocations bounded by file headers</span>
               <span>one run per output directory</span>
@@ -267,11 +267,11 @@
           <h2>Four stages. One pass.</h2>
           <p class="section-lede">Cheap checks run before expensive ones, and each stage is its own crate you can use alone.</p>
         </div>
-        <ol class="steps">
-          <li data-reveal><span class="step-node" aria-hidden="true"></span><div><h3>Decode</h3><p>Symphonia reads the container, rubato resamples to 16 kHz, and loudness is leveled toward −20 dBFS.</p><code>aerosieve-decode</code></div></li>
-          <li data-reveal><span class="step-node" aria-hidden="true"></span><div><h3>Segment</h3><p>A hysteresis state machine with Silero's defaults turns speech probability into 3–30 s clips.</p><code>aerosieve-segment</code></div></li>
-          <li data-reveal><span class="step-node" aria-hidden="true"></span><div><h3>Score</h3><p>Four measurements per clip, then a <code>FilterPolicy</code> that names the first check a clip fails.</p><code>aerosieve-acoustic</code></div></li>
-          <li data-reveal><span class="step-node" aria-hidden="true"></span><div><h3>Shard</h3><p>Kept clips go into WebDataset tar shards with a JSONL manifest and run totals.</p><code>aerosieve-shard</code></div></li>
+        <ol class="steps" data-reveal="stagger">
+          <li><span class="step-node" aria-hidden="true"></span><div><h3>Decode</h3><p>Symphonia reads the container, rubato resamples to 16 kHz, and loudness is leveled toward −20 dBFS.</p><code>aerosieve-decode</code></div></li>
+          <li><span class="step-node" aria-hidden="true"></span><div><h3>Segment</h3><p>A hysteresis state machine with Silero's defaults turns speech probability into 3–30 s clips.</p><code>aerosieve-segment</code></div></li>
+          <li><span class="step-node" aria-hidden="true"></span><div><h3>Score</h3><p>Four measurements per clip, then a <code>FilterPolicy</code> that names the first check a clip fails.</p><code>aerosieve-acoustic</code></div></li>
+          <li><span class="step-node" aria-hidden="true"></span><div><h3>Shard</h3><p>Kept clips go into WebDataset tar shards with a JSONL manifest and run totals.</p><code>aerosieve-shard</code></div></li>
         </ol>
       </div>
     </section>
@@ -283,6 +283,7 @@
         </div>
         <div class="code-card" data-tabs>
           <div class="tabs" role="tablist" aria-label="Interfaces">
+            <span class="tab-indicator" data-tab-indicator aria-hidden="true"></span>
             <button type="button" role="tab" aria-selected="true" aria-controls="tab-cli">CLI</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="tab-python">Python</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="tab-rust">Rust</button>
@@ -335,7 +336,7 @@ println!("kept {:.1}%", stats.retention_rate() * 100.0);</code></pre>
             <li>One transcript per file is copied to every clip. Transcripts aren't aligned to clips.</li>
             <li>Speech is found by signal level unless you build with Silero VAD.</li>
           </ul>
-          <a class="text-link" href="https://github.com/kunalgoesbyken/AeroSieve#limitations">Read the full list →</a>
+          <a class="text-link" href="https://github.com/kunalgoesbyken/AeroSieve#limitations">Read the full list<span class="nudge" aria-hidden="true">→</span></a>
         </div>
       </div>
     </section>
