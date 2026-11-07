@@ -21,6 +21,7 @@ mod resample;
 mod tests;
 
 pub use error::DecodeError;
+pub use resample::resample_mono;
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};

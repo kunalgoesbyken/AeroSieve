@@ -9,8 +9,9 @@ members = [
     "crates/aerosieve-lexical",
     "crates/aerosieve",
     "crates/aerosieve-cli",
+    "crates/aerosieve-sievebench",
 ]
-exclude = ["bindings/python"]
+exclude = ["bindings/python", "bindings/wasm"]
 
 [workspace.package]
 edition = "2024"
@@ -36,6 +37,7 @@ tar = "0.4"
 regex = "1.11"
 hound = "3.5"
 clap = { version = "4", features = ["derive"] }
+rayon = "1.10"
 libc = "0.2"
 criterion = "0.5"
 proptest = "1"
