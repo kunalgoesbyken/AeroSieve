@@ -117,10 +117,7 @@ fn curate_files(
     config: PipelineConfig,
 ) -> Result<PipelineStats, PipelineError> {
     let mut pipeline = Pipeline::new(config)?;
-    for (path, transcript) in files {
-        // A file that fails to decode is counted in `files_failed`.
-        let _ = pipeline.process_file(path, transcript.as_deref());
-    }
+    pipeline.process_files(files);
     pipeline.finish()
 }
 
