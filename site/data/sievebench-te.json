@@ -1,0 +1,621 @@
+{
+  "corpus": "Telugu",
+  "source": "FLEURS dev split",
+  "utterances": 311,
+  "hours": 0.8940833333333332,
+  "elapsed_s": 29.653086000000002,
+  "policy": {
+    "min_snr_db": 10.0,
+    "max_clip_ratio": 0.01,
+    "min_dbfs": -40.0,
+    "max_dbfs": -3.0,
+    "min_spectral_flatness": 0.005
+  },
+  "overall": {
+    "should_reject": 4043,
+    "caught": 4043,
+    "should_keep": 2847,
+    "falsely_rejected": 133,
+    "recall": 1.0,
+    "precision": 0.9681513409961686,
+    "false_reject_rate": 0.04671584123638918
+  },
+  "families": [
+    {
+      "family": "control",
+      "should_reject": 0,
+      "caught": 0,
+      "should_keep": 652,
+      "falsely_rejected": 17,
+      "recall": 0.0,
+      "precision": 0.0,
+      "false_reject_rate": 0.02607361963190184,
+      "right_reason": 0
+    },
+    {
+      "family": "noise",
+      "should_reject": 1866,
+      "caught": 1866,
+      "should_keep": 1880,
+      "falsely_rejected": 106,
+      "recall": 1.0,
+      "precision": 0.9462474645030426,
+      "false_reject_rate": 0.05638297872340425,
+      "right_reason": 1866
+    },
+    {
+      "family": "clipping",
+      "should_reject": 933,
+      "caught": 933,
+      "should_keep": 315,
+      "falsely_rejected": 10,
+      "recall": 1.0,
+      "precision": 0.9893955461293743,
+      "false_reject_rate": 0.031746031746031744,
+      "right_reason": 933
+    },
+    {
+      "family": "level",
+      "should_reject": 311,
+      "caught": 311,
+      "should_keep": 0,
+      "falsely_rejected": 0,
+      "recall": 1.0,
+      "precision": 1.0,
+      "false_reject_rate": 0.0,
+      "right_reason": 311
+    },
+    {
+      "family": "tone",
+      "should_reject": 933,
+      "caught": 933,
+      "should_keep": 0,
+      "falsely_rejected": 0,
+      "recall": 1.0,
+      "precision": 1.0,
+      "false_reject_rate": 0.0,
+      "right_reason": 933
+    }
+  ],
+  "conditions": [
+    {
+      "id": "clean",
+      "label": "clean",
+      "family": "control",
+      "clips": 325,
+      "kept": 312,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 13
+      },
+      "expected": {
+        "keep": 325
+      }
+    },
+    {
+      "id": "phone_line",
+      "label": "phone line (8 kHz μ-law)",
+      "family": "control",
+      "clips": 327,
+      "kept": 323,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 4
+      },
+      "expected": {
+        "keep": 327
+      }
+    },
+    {
+      "id": "white_noise_30db",
+      "label": "white noise at 30 dB",
+      "family": "noise",
+      "clips": 317,
+      "kept": 306,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 11
+      },
+      "expected": {
+        "keep": 317
+      }
+    },
+    {
+      "id": "white_noise_20db",
+      "label": "white noise at 20 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 284,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 27
+      },
+      "expected": {
+        "keep": 311
+      }
+    },
+    {
+      "id": "white_noise_15db",
+      "label": "white noise at 15 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 203,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 108
+      },
+      "expected": {
+        "borderline": 311
+      }
+    },
+    {
+      "id": "white_noise_10db",
+      "label": "white noise at 10 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 14,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 297
+      },
+      "expected": {
+        "borderline": 311
+      }
+    },
+    {
+      "id": "white_noise_5db",
+      "label": "white noise at 5 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "white_noise_0db",
+      "label": "white noise at 0 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "pink_noise_30db",
+      "label": "pink noise at 30 dB",
+      "family": "noise",
+      "clips": 315,
+      "kept": 303,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 12
+      },
+      "expected": {
+        "keep": 315
+      }
+    },
+    {
+      "id": "pink_noise_20db",
+      "label": "pink noise at 20 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 286,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 25
+      },
+      "expected": {
+        "keep": 311
+      }
+    },
+    {
+      "id": "pink_noise_15db",
+      "label": "pink noise at 15 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 203,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 108
+      },
+      "expected": {
+        "borderline": 311
+      }
+    },
+    {
+      "id": "pink_noise_10db",
+      "label": "pink noise at 10 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 13,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 298
+      },
+      "expected": {
+        "borderline": 311
+      }
+    },
+    {
+      "id": "pink_noise_5db",
+      "label": "pink noise at 5 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "pink_noise_0db",
+      "label": "pink noise at 0 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "babble_noise_30db",
+      "label": "babble noise at 30 dB",
+      "family": "noise",
+      "clips": 315,
+      "kept": 304,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 11
+      },
+      "expected": {
+        "keep": 315
+      }
+    },
+    {
+      "id": "babble_noise_20db",
+      "label": "babble noise at 20 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 291,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 20
+      },
+      "expected": {
+        "keep": 311
+      }
+    },
+    {
+      "id": "babble_noise_15db",
+      "label": "babble noise at 15 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 219,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 92
+      },
+      "expected": {
+        "borderline": 311
+      }
+    },
+    {
+      "id": "babble_noise_10db",
+      "label": "babble noise at 10 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 52,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 259
+      },
+      "expected": {
+        "borderline": 311
+      }
+    },
+    {
+      "id": "babble_noise_5db",
+      "label": "babble noise at 5 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "babble_noise_0db",
+      "label": "babble noise at 0 dB",
+      "family": "noise",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "overdrive_x2",
+      "label": "overdriven ×2",
+      "family": "clipping",
+      "clips": 318,
+      "kept": 308,
+      "no_clip": 0,
+      "rejected": {
+        "low_snr": 10
+      },
+      "expected": {
+        "borderline": 3,
+        "keep": 315
+      }
+    },
+    {
+      "id": "overdrive_x4",
+      "label": "overdriven ×4",
+      "family": "clipping",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "clipping": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "overdrive_x8",
+      "label": "overdriven ×8",
+      "family": "clipping",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "clipping": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "overdrive_x16",
+      "label": "overdriven ×16",
+      "family": "clipping",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "clipping": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "quiet",
+      "label": "quiet (-55 dBFS)",
+      "family": "level",
+      "clips": 1,
+      "kept": 0,
+      "no_clip": 310,
+      "rejected": {
+        "too_quiet": 1
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "dial_tone",
+      "label": "dial tone",
+      "family": "tone",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "tonal": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "test_tone",
+      "label": "1 kHz test tone",
+      "family": "tone",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "tonal": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    },
+    {
+      "id": "hum",
+      "label": "50 Hz hum",
+      "family": "tone",
+      "clips": 311,
+      "kept": 0,
+      "no_clip": 0,
+      "rejected": {
+        "tonal": 311
+      },
+      "expected": {
+        "reject": 311
+      }
+    }
+  ],
+  "snr_estimates": [
+    {
+      "noise": "white",
+      "injected_snr_db": 30.0,
+      "median_estimate_db": 15.998241,
+      "p25_estimate_db": 13.270065,
+      "p75_estimate_db": 18.799076,
+      "kept_rate": 0.9652996845425867
+    },
+    {
+      "noise": "white",
+      "injected_snr_db": 20.0,
+      "median_estimate_db": 14.115932,
+      "p25_estimate_db": 11.848307,
+      "p75_estimate_db": 17.051289,
+      "kept_rate": 0.9131832797427653
+    },
+    {
+      "noise": "white",
+      "injected_snr_db": 15.0,
+      "median_estimate_db": 11.153549,
+      "p25_estimate_db": 9.2131195,
+      "p75_estimate_db": 12.998074,
+      "kept_rate": 0.6527331189710611
+    },
+    {
+      "noise": "white",
+      "injected_snr_db": 10.0,
+      "median_estimate_db": 7.3304977,
+      "p25_estimate_db": 5.976494,
+      "p75_estimate_db": 8.601133,
+      "kept_rate": 0.04501607717041801
+    },
+    {
+      "noise": "white",
+      "injected_snr_db": 5.0,
+      "median_estimate_db": 2.9885445,
+      "p25_estimate_db": 1.9212894,
+      "p75_estimate_db": 3.8949738,
+      "kept_rate": 0.0
+    },
+    {
+      "noise": "white",
+      "injected_snr_db": 0.0,
+      "median_estimate_db": -1.8043804,
+      "p25_estimate_db": -2.7158089,
+      "p75_estimate_db": -0.9733696,
+      "kept_rate": 0.0
+    },
+    {
+      "noise": "pink",
+      "injected_snr_db": 30.0,
+      "median_estimate_db": 16.818295,
+      "p25_estimate_db": 13.56422,
+      "p75_estimate_db": 19.740036,
+      "kept_rate": 0.9619047619047619
+    },
+    {
+      "noise": "pink",
+      "injected_snr_db": 20.0,
+      "median_estimate_db": 14.191879,
+      "p25_estimate_db": 11.80966,
+      "p75_estimate_db": 16.985119,
+      "kept_rate": 0.9196141479099679
+    },
+    {
+      "noise": "pink",
+      "injected_snr_db": 15.0,
+      "median_estimate_db": 11.144703,
+      "p25_estimate_db": 9.2565365,
+      "p75_estimate_db": 13.020222,
+      "kept_rate": 0.6527331189710611
+    },
+    {
+      "noise": "pink",
+      "injected_snr_db": 10.0,
+      "median_estimate_db": 7.3160057,
+      "p25_estimate_db": 5.954954,
+      "p75_estimate_db": 8.609781,
+      "kept_rate": 0.04180064308681672
+    },
+    {
+      "noise": "pink",
+      "injected_snr_db": 5.0,
+      "median_estimate_db": 2.9088345,
+      "p25_estimate_db": 1.9497547,
+      "p75_estimate_db": 3.885458,
+      "kept_rate": 0.0
+    },
+    {
+      "noise": "pink",
+      "injected_snr_db": 0.0,
+      "median_estimate_db": -1.7603111,
+      "p25_estimate_db": -2.6850681,
+      "p75_estimate_db": -0.94758797,
+      "kept_rate": 0.0
+    },
+    {
+      "noise": "babble",
+      "injected_snr_db": 30.0,
+      "median_estimate_db": 16.64516,
+      "p25_estimate_db": 13.421398,
+      "p75_estimate_db": 20.094067,
+      "kept_rate": 0.9650793650793651
+    },
+    {
+      "noise": "babble",
+      "injected_snr_db": 20.0,
+      "median_estimate_db": 14.597286,
+      "p25_estimate_db": 12.159531,
+      "p75_estimate_db": 17.43473,
+      "kept_rate": 0.9356913183279743
+    },
+    {
+      "noise": "babble",
+      "injected_snr_db": 15.0,
+      "median_estimate_db": 11.725328,
+      "p25_estimate_db": 9.766998,
+      "p75_estimate_db": 13.642315,
+      "kept_rate": 0.7041800643086816
+    },
+    {
+      "noise": "babble",
+      "injected_snr_db": 10.0,
+      "median_estimate_db": 8.196106,
+      "p25_estimate_db": 6.673649,
+      "p75_estimate_db": 9.625347,
+      "kept_rate": 0.16720257234726688
+    },
+    {
+      "noise": "babble",
+      "injected_snr_db": 5.0,
+      "median_estimate_db": 4.3778877,
+      "p25_estimate_db": 3.2126694,
+      "p75_estimate_db": 5.4620113,
+      "kept_rate": 0.0
+    },
+    {
+      "noise": "babble",
+      "injected_snr_db": 0.0,
+      "median_estimate_db": 1.0235348,
+      "p25_estimate_db": -0.017894745,
+      "p75_estimate_db": 1.9864006,
+      "kept_rate": 0.0
+    }
+  ]
+}

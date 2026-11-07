@@ -12,3 +12,4 @@
 /bindings/python/Cargo.lock
 /bindings/python/target/
 __pycache__/
+/.playwright-mcp/
