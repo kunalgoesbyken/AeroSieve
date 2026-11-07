@@ -39,8 +39,11 @@ impl Segment {
 
 /// Tuning for [`Segmenter`].
 ///
-/// Defaults are Silero VAD's `get_speech_timestamps` defaults, plus the
-/// 3-30 s clip bounds used by Emilia-Pipe.
+/// Defaults are Silero VAD's `get_speech_timestamps` defaults, except that
+/// a pause must last 500 ms rather than 100 ms to end a clip, plus the
+/// 3-30 s clip bounds used by Emilia-Pipe. Silero's 100 ms suits detecting
+/// speech; for building clips it cuts natural speech at every word gap into
+/// fragments too short to keep.
 #[derive(Debug, Clone)]
 pub struct SegmentConfig {
     /// Sample rate of the audio being segmented, in Hz.
@@ -69,7 +72,7 @@ impl Default for SegmentConfig {
             threshold: 0.5,
             neg_threshold: 0.35,
             min_speech_duration_ms: 250,
-            min_silence_duration_ms: 100,
+            min_silence_duration_ms: 500,
             speech_pad_ms: 30,
             min_segment_s: 3.0,
             max_segment_s: 30.0,

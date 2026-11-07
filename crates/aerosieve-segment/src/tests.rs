@@ -154,6 +154,26 @@ fn a_gap_shorter_than_min_silence_is_bridged() {
 }
 
 #[test]
+fn phrases_separated_by_short_pauses_form_one_clip() {
+    let phrase = speech(samples(1.5));
+    let pause = silence(ms(300));
+    let audio = concat(&[
+        silence(ms(500)),
+        phrase.clone(),
+        pause.clone(),
+        phrase.clone(),
+        pause,
+        phrase,
+        silence(ms(500)),
+    ]);
+
+    let segments = segment(&audio);
+
+    assert_eq!(segments.len(), 1);
+    assert!((5.0..=5.4).contains(&segments[0].duration_s(SAMPLE_RATE)));
+}
+
+#[test]
 fn bursts_below_the_length_floors_are_dropped() {
     let shorter_than_min_speech = ms(150);
     let shorter_than_min_segment = samples(1.0);
@@ -224,6 +244,7 @@ fn padding_extends_both_ends_and_clamps_to_the_buffer() {
 fn padding_wider_than_a_gap_does_not_make_segments_overlap() {
     let config = SegmentConfig {
         speech_pad_ms: 400,
+        min_silence_duration_ms: 100,
         ..SegmentConfig::default()
     };
     let audio = concat(&[speech(samples(4.0)), silence(ms(300)), speech(samples(4.0))]);
