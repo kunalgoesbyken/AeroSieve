@@ -176,6 +176,7 @@ impl Hysteresis {
 /// once windows have stayed below `neg_threshold` for
 /// `min_silence_duration_ms`. Runs are then filtered by minimum duration,
 /// padded, split to `max_segment_s`, and filtered by `min_segment_s`.
+#[derive(Clone)]
 pub struct Segmenter<D: SpeechDetector> {
     detector: D,
     config: SegmentConfig,

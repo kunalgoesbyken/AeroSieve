@@ -10,7 +10,8 @@ keywords = ["audio", "speech", "vad", "dataset", "webdataset"]
 categories = ["multimedia::audio"]
 
 [features]
-default = []
+default = ["parallel"]
+parallel = ["dep:rayon"]
 silero = ["aerosieve-segment/silero"]
 
 [dependencies]
@@ -19,6 +20,7 @@ aerosieve-decode.workspace = true
 aerosieve-segment.workspace = true
 aerosieve-shard.workspace = true
 aerosieve-lexical.workspace = true
+rayon = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

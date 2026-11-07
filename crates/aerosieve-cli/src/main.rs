@@ -114,10 +114,18 @@ fn curate(args: &CurateArgs) -> CliResult<()> {
     }
     let mut pipeline = Pipeline::new(config)?;
 
-    for file in &files {
-        let curated = sidecar::transcript(file)
-            .and_then(|transcript| Ok(pipeline.process_file(file, transcript.as_deref())?));
-        if let Err(error) = curated {
+    let inputs: Vec<_> = files
+        .iter()
+        .filter_map(|file| match sidecar::transcript(file) {
+            Ok(transcript) => Some((file.clone(), transcript)),
+            Err(error) => {
+                eprintln!("{}: skipped ({error})", file.display());
+                None
+            }
+        })
+        .collect();
+    for ((file, _), result) in inputs.iter().zip(pipeline.process_files(&inputs)) {
+        if let Err(error) = result {
             eprintln!("{}: skipped ({error})", file.display());
         }
     }

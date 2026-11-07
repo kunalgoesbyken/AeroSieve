@@ -193,6 +193,7 @@ impl PipelineStats {
 ///
 /// Use it to see how a policy judges recordings before a real run.
 /// [`Pipeline`] wraps one and adds transcript handling and shard output.
+#[derive(Clone)]
 pub struct Inspector<D: SpeechDetector = EnergyDetector> {
     decode: DecodeConfig,
     segmenter: Segmenter<D>,
@@ -230,8 +231,17 @@ impl<D: SpeechDetector> Inspector<D> {
 
     /// Decode `path`, then segment and score it.
     pub fn inspect_file(&mut self, path: &Path) -> Result<FileOutcome, PipelineError> {
+        self.inspect_file_keeping_audio(path)
+            .map(|(outcome, _)| outcome)
+    }
+
+    fn inspect_file_keeping_audio(
+        &mut self,
+        path: &Path,
+    ) -> Result<(FileOutcome, DecodedAudio), PipelineError> {
         let audio = aerosieve_decode::decode_file(path, &self.decode)?;
-        self.inspect_audio(path, &audio)
+        let outcome = self.inspect_audio(path, &audio)?;
+        Ok((outcome, audio))
     }
 
     /// Segment and score audio that is already decoded.
@@ -331,7 +341,17 @@ impl<D: SpeechDetector> Pipeline<D> {
         audio: &DecodedAudio,
         transcript: Option<&str>,
     ) -> Result<FileOutcome, PipelineError> {
-        let outcome = self.curate(source, audio, transcript);
+        let outcome = self
+            .inspector
+            .inspect_audio(source, audio)
+            .and_then(|outcome| self.write(outcome, audio, transcript));
+        self.count(outcome)
+    }
+
+    fn count(
+        &mut self,
+        outcome: Result<FileOutcome, PipelineError>,
+    ) -> Result<FileOutcome, PipelineError> {
         let counter = match outcome {
             Ok(_) => &mut self.stats.files_processed,
             Err(_) => &mut self.stats.files_failed,
@@ -353,15 +373,14 @@ impl<D: SpeechDetector> Pipeline<D> {
         })
     }
 
-    fn curate(
+    fn write(
         &mut self,
-        source: &Path,
+        outcome: FileOutcome,
         audio: &DecodedAudio,
         transcript: Option<&str>,
     ) -> Result<FileOutcome, PipelineError> {
-        let outcome = self.inspector.inspect_audio(source, audio)?;
         let transcript = self.normalize(transcript.unwrap_or_default());
-        let source_file = source.to_string_lossy();
+        let source_file = outcome.path.to_string_lossy().into_owned();
 
         for clip in &outcome.segments {
             let duration_s = clip.segment.duration_s(audio.sample_rate);
@@ -369,7 +388,7 @@ impl<D: SpeechDetector> Pipeline<D> {
                 let mut meta =
                     SampleMeta::new(duration_s, audio.sample_rate).with_metrics(&clip.metrics)?;
                 meta.transcript = transcript.clone();
-                meta.source_file = Some(source_file.to_string());
+                meta.source_file = Some(source_file.clone());
                 let samples = &audio.samples[clip.segment.start_sample..clip.segment.end_sample];
                 self.writer.write_sample(samples, meta)?;
             }
@@ -383,6 +402,48 @@ impl<D: SpeechDetector> Pipeline<D> {
             Some(rules) => rules.normalize(transcript).text,
             None => transcript.to_string(),
         }
+    }
+}
+
+#[cfg(feature = "parallel")]
+impl<D: SpeechDetector + Clone + Send + Sync> Pipeline<D> {
+    /// Curate many files using every core, with the same result as calling
+    /// [`Pipeline::process_file`] on each in order.
+    ///
+    /// Files are decoded, segmented, and scored in parallel, one batch per
+    /// round so at most one decoded file per thread is held in memory, then
+    /// written in input order so shards are identical to a sequential run.
+    pub fn process_files(
+        &mut self,
+        inputs: &[(PathBuf, Option<String>)],
+    ) -> Vec<Result<FileOutcome, PipelineError>> {
+        use rayon::prelude::*;
+
+        let batch = rayon::current_num_threads().max(1);
+        let mut results = Vec::with_capacity(inputs.len());
+        for inputs in inputs.chunks(batch) {
+            let template = &self.inspector;
+            let inspected: Vec<_> = inputs
+                .par_iter()
+                .map_init(
+                    || template.clone(),
+                    |inspector, (path, _)| inspector.inspect_file_keeping_audio(path),
+                )
+                .collect();
+            for ((_, transcript), inspected) in inputs.iter().zip(inspected) {
+                results.push(match inspected {
+                    Ok((outcome, audio)) => {
+                        let written = self.write(outcome, &audio, transcript.as_deref());
+                        self.count(written)
+                    }
+                    Err(error) => {
+                        self.stats.files_failed += 1;
+                        Err(error)
+                    }
+                });
+            }
+        }
+        results
     }
 }
 

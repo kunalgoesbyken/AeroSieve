@@ -267,3 +267,57 @@ fn stats_serialize_rejections_by_identifier() {
         stats
     );
 }
+
+#[test]
+fn parallel_curation_matches_sequential_curation() {
+    let files = Workspace::new();
+    let inputs: Vec<(PathBuf, Option<String>)> = (0..5)
+        .map(|index| {
+            let path = files.root.path().join(format!("take-{index}.wav"));
+            let spec = hound::WavSpec {
+                channels: 1,
+                sample_rate: SAMPLE_RATE,
+                bits_per_sample: 32,
+                sample_format: hound::SampleFormat::Float,
+            };
+            let mut wav = hound::WavWriter::create(&path, spec).unwrap();
+            for sample in recording().samples {
+                wav.write_sample(sample).unwrap();
+            }
+            wav.finalize().unwrap();
+            (path, Some(format!("take {index}")))
+        })
+        .chain([(PathBuf::from("absent.wav"), None)])
+        .collect();
+
+    let sequential = Workspace::new();
+    let mut pipeline = Pipeline::new(sequential.config()).unwrap();
+    for (path, transcript) in &inputs {
+        let _ = pipeline.process_file(path, transcript.as_deref());
+    }
+    let sequential_stats = pipeline.finish().unwrap();
+
+    let parallel = Workspace::new();
+    let mut pipeline = Pipeline::new(parallel.config()).unwrap();
+    let results = pipeline.process_files(&inputs);
+    let parallel_stats = pipeline.finish().unwrap();
+
+    assert_eq!(results.iter().filter(|r| r.is_err()).count(), 1);
+    assert_eq!(parallel_stats.files_failed, 1);
+    assert_eq!(
+        parallel_stats.files_processed,
+        sequential_stats.files_processed
+    );
+    assert_eq!(
+        parallel_stats.segments_accepted,
+        sequential_stats.segments_accepted
+    );
+    let keys = |workspace: &Workspace| -> Vec<_> {
+        workspace
+            .manifest()
+            .into_iter()
+            .map(|record| (record.key, record.meta.transcript))
+            .collect()
+    };
+    assert_eq!(keys(&parallel), keys(&sequential));
+}

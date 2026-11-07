@@ -43,10 +43,13 @@ fn babble_never_contains_the_target_talker() {
 fn noise_expectations_follow_the_injected_snr() {
     let corpus = corpus();
     let expect = |snr_db| {
-        Condition::Noise { kind: NoiseKind::White, snr_db }
-            .apply(&corpus, 0)
-            .unwrap()
-            .expect
+        Condition::Noise {
+            kind: NoiseKind::White,
+            snr_db,
+        }
+        .apply(&corpus, 0)
+        .unwrap()
+        .expect
     };
     assert_eq!(expect(20.0), Expect::Keep);
     assert_eq!(expect(10.0), Expect::Borderline);
@@ -56,7 +59,12 @@ fn noise_expectations_follow_the_injected_snr() {
 #[test]
 fn overdrive_expectation_follows_the_clipped_fraction() {
     let corpus = corpus();
-    let expect = |gain| Condition::Overdrive { gain }.apply(&corpus, 0).unwrap().expect;
+    let expect = |gain| {
+        Condition::Overdrive { gain }
+            .apply(&corpus, 0)
+            .unwrap()
+            .expect
+    };
     assert_eq!(expect(1.0), Expect::Keep);
     assert_eq!(expect(16.0), Expect::Reject);
 }
@@ -96,7 +104,11 @@ fn scores_count_misses_false_rejects_and_borderline_correctly() {
     let observations = [
         observation(0, Expect::Keep, Verdict::Kept),
         observation(0, Expect::Keep, Verdict::Rejected(RejectReason::LowSnr)),
-        observation(0, Expect::Borderline, Verdict::Rejected(RejectReason::LowSnr)),
+        observation(
+            0,
+            Expect::Borderline,
+            Verdict::Rejected(RejectReason::LowSnr),
+        ),
         observation(1, Expect::Reject, Verdict::NoClip),
         observation(1, Expect::Reject, Verdict::Kept),
     ];
@@ -115,6 +127,10 @@ fn scores_count_misses_false_rejects_and_borderline_correctly() {
     assert_eq!(report.overall.falsely_rejected, 1);
     assert_eq!(report.overall.recall, 0.5);
     assert_eq!(report.overall.false_reject_rate, 0.5);
-    let level = report.families.iter().find(|f| f.family == Family::Level).unwrap();
+    let level = report
+        .families
+        .iter()
+        .find(|f| f.family == Family::Level)
+        .unwrap();
     assert_eq!(level.right_reason, 1);
 }
