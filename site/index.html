@@ -11,7 +11,7 @@
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..600&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,300..700&family=Fragment+Mono&display=swap">
   <link rel="modulepreload" href="pkg/aerosieve_wasm.js">
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="js/main.js"></script>
@@ -37,7 +37,6 @@
     <section class="hero" data-hero>
       <div class="shell hero-inner">
         <div class="hero-copy">
-          <p class="eyebrow">Open-source speech data curation</p>
           <h1><span>Keep the speech.</span> <span>Drop the rest.</span></h1>
           <p class="hero-lede">AeroSieve cuts raw recordings into 3–30 second clips, measures each one for noise, clipping, tones and silence, and writes the keepers as WebDataset shards. Every clip it throws away comes with a reason.</p>
           <div class="hero-actions">
@@ -71,13 +70,12 @@
 
     <section class="section" id="demo">
       <div class="shell">
-        <div class="section-head centered">
-          <p class="eyebrow dark">Live demo</p>
+        <div class="section-head">
           <h2>Drop in a recording. See what your model would learn from.</h2>
           <p class="section-lede">This is the same Rust code as the command-line tool, compiled to WebAssembly. Nothing is uploaded.</p>
         </div>
 
-        <div class="demo" data-demo>
+        <div class="demo is-loading" data-demo>
           <div class="demo-toolbar">
             <div class="chips" role="group" aria-label="Sample recordings">
               <button type="button" class="chip" data-sample="mixed.ogg" aria-pressed="true">Mixed</button>
@@ -120,13 +118,13 @@
           </div>
           <p class="fine demo-drop">Drag any wav, mp3, flac, ogg or mp4 onto this panel. Recordings up to 15 minutes.</p>
         </div>
-        <p class="fine centered">Samples are LibriSpeech utterances (CC BY 4.0) with noise, clipping and a dial tone added.</p>
+        <p class="fine">Samples are LibriSpeech utterances (CC BY 4.0) with noise, clipping and a dial tone added.</p>
       </div>
     </section>
 
     <section class="section section-tight">
       <div class="shell">
-        <div class="section-head centered">
+        <div class="section-head">
           <h2>Raw audio in. Training shards out.</h2>
         </div>
         <div class="bento">
@@ -148,28 +146,13 @@
             <p>WADA-SNR estimates noise from the clip alone. No clean copy needed.</p>
           </article>
           <article class="card span-2" data-reveal>
-            <div class="mock mock-clip">
-              <svg viewBox="0 0 160 60" aria-hidden="true"><path d="M0 30 C10 30 12 6 20 6 L34 6 C42 6 44 54 52 54 L66 54 C74 54 76 6 84 6 L98 6 C106 6 108 54 116 54 L130 54 C138 54 140 30 160 30"/><line x1="0" y1="6" x2="160" y2="6"/><line x1="0" y1="54" x2="160" y2="54"/></svg>
-            </div>
-            <h3>Clipping, even after leveling</h3>
-            <p>Measured against the source's own full scale, so turning a file down can't hide it.</p>
-          </article>
-          <article class="card span-2" data-reveal>
-            <div class="mock mock-spectrum">
-              <div class="bars speech" aria-hidden="true"><i style="--h:40%"></i><i style="--h:70%"></i><i style="--h:55%"></i><i style="--h:80%"></i><i style="--h:50%"></i><i style="--h:62%"></i><i style="--h:45%"></i></div>
-              <div class="bars tone" aria-hidden="true"><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:95%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i></div>
-            </div>
-            <h3>Tones and hum</h3>
-            <p>Spectral flatness in the 300–3400 Hz band catches dial tones without flagging phone audio.</p>
-          </article>
-          <article class="card span-2" data-reveal>
             <div class="mock mock-segments" aria-hidden="true">
               <span style="--w:22%"></span><span style="--w:38%"></span><span style="--w:16%"></span>
             </div>
             <h3>Clips of 3 to 30 seconds</h3>
             <p>A hysteresis VAD finds speech and cuts it where people pause. Silero VAD is optional.</p>
           </article>
-          <article class="card span-3" data-reveal>
+          <article class="card span-4" data-reveal>
             <div class="mock mock-files">
               <code>shard-000000.tar</code>
               <code>manifest.jsonl</code>
@@ -180,6 +163,21 @@
             <p>Every kept clip is a wav and a json in a tar shard. <code>aerosieve nemo-manifest</code> adds NVIDIA NeMo's layout.</p>
           </article>
           <article class="card span-3" data-reveal>
+            <div class="mock mock-clip">
+              <svg viewBox="0 0 160 60" aria-hidden="true"><path d="M0 30 C10 30 12 6 20 6 L34 6 C42 6 44 54 52 54 L66 54 C74 54 76 6 84 6 L98 6 C106 6 108 54 116 54 L130 54 C138 54 140 30 160 30"/><line x1="0" y1="6" x2="160" y2="6"/><line x1="0" y1="54" x2="160" y2="54"/></svg>
+            </div>
+            <h3>Clipping, even after leveling</h3>
+            <p>Measured against the source's own full scale, so turning a file down can't hide it.</p>
+          </article>
+          <article class="card span-3" data-reveal>
+            <div class="mock mock-spectrum">
+              <div class="bars speech" aria-hidden="true"><i style="--h:40%"></i><i style="--h:70%"></i><i style="--h:55%"></i><i style="--h:80%"></i><i style="--h:50%"></i><i style="--h:62%"></i><i style="--h:45%"></i></div>
+              <div class="bars tone" aria-hidden="true"><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:95%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i><i style="--h:4%"></i></div>
+            </div>
+            <h3>Tones and hum</h3>
+            <p>Spectral flatness in the 300–3400 Hz band catches dial tones without flagging phone audio.</p>
+          </article>
+          <article class="card span-6 card-wide" data-reveal>
             <div class="mock mock-limits">
               <span>max_duration_s enforced while decoding</span>
               <span>allocations bounded by file headers</span>
@@ -192,7 +190,7 @@
       </div>
     </section>
 
-    <section class="section paper" id="results" data-results>
+    <section class="section wash" id="results" data-results>
       <div class="shell">
         <div class="split-head">
           <div>
@@ -202,12 +200,10 @@
           <p class="section-lede">Noise at six levels, clipping, tones, hum, near-silence and a phone line, injected into real recordings in six languages. Every damaged clip goes through the same code as the CLI.</p>
         </div>
 
-        <dl class="stat-row" data-reveal>
-          <div><dt>Damaged clips caught</dt><dd><span data-bench-caught>24,385</span> <small>of <span data-bench-expected>24,409</span></small></dd></div>
-          <div><dt>Damaged recordings judged</dt><dd data-bench-clips>51,352</dd></div>
-          <div><dt>Recordings, 6 languages</dt><dd data-bench-recordings>1,834</dd></div>
-          <div><dt>GPUs used</dt><dd>0</dd></div>
-        </dl>
+        <p class="verdict-line" data-reveal>
+          <strong><span data-bench-caught>24,385</span> of <span data-bench-expected>24,409</span></strong>
+          damaged clips caught, out of <span data-bench-clips>51,352</span> damaged copies of <span data-bench-recordings>1,834</span> real recordings in six languages. On a laptop CPU.
+        </p>
 
         <article class="result" data-reveal>
           <h3>By language</h3>
@@ -259,14 +255,13 @@
             <div><dt>16 kHz WAV, 8 threads</dt><dd>1.7 s</dd></div>
           </dl>
         </article>
-        <p class="fine centered reproduce">Every number in this section is reproduced by <code>crates/aerosieve-sievebench/scripts/run_all.sh</code>.</p>
+        <p class="fine reproduce">Every number in this section is reproduced by <code>crates/aerosieve-sievebench/scripts/run_all.sh</code>.</p>
       </div>
     </section>
 
     <section class="section" id="how">
       <div class="shell split">
         <div class="split-side">
-          <p class="eyebrow dark">From recording to shard</p>
           <h2>Four stages. One pass.</h2>
           <p class="section-lede">Cheap checks run before expensive ones, and each stage is its own crate you can use alone.</p>
         </div>
@@ -281,7 +276,7 @@
 
     <section class="section section-tight" id="install">
       <div class="shell">
-        <div class="section-head centered">
+        <div class="section-head">
           <h2>Use it from the command line, Python, or Rust.</h2>
         </div>
         <div class="code-card" data-tabs>
@@ -316,7 +311,7 @@ println!("kept {:.1}%", stats.retention_rate() * 100.0);</code></pre>
       </div>
     </section>
 
-    <section class="section paper">
+    <section class="section wash">
       <div class="shell split">
         <div class="split-side">
           <h2 class="large">What it doesn't do yet.</h2>
@@ -335,7 +330,6 @@ println!("kept {:.1}%", stats.retention_rate() * 100.0);</code></pre>
 
     <section class="section closing">
       <div class="shell centered">
-        <p class="eyebrow dark">Start with your own recordings</p>
         <h2 class="large">Clean data is a choice.<br>Make it on purpose.</h2>
         <div class="closing-actions">
           <button class="command dark" type="button" data-copy="cargo install aerosieve-cli"><span aria-hidden="true">$</span> cargo install aerosieve-cli</button>

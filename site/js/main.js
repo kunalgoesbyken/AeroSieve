@@ -18,12 +18,15 @@ mount("[data-hero]", mountHero);
 mount("[data-demo]", mountDemo);
 mount("[data-results]", mountResults);
 
-const reveal = new IntersectionObserver(
-  (entries) =>
-    entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
-      entry.target.classList.add("is-visible");
-      reveal.unobserve(entry.target);
-    }),
-  { rootMargin: "0px 0px -10% 0px" },
-);
-document.querySelectorAll("[data-reveal]").forEach((node) => reveal.observe(node));
+if ("IntersectionObserver" in window) {
+  const reveal = new IntersectionObserver(
+    (entries) =>
+      entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
+        entry.target.classList.add("is-visible");
+        reveal.unobserve(entry.target);
+      }),
+    { rootMargin: "0px 0px -10% 0px" },
+  );
+  document.querySelectorAll("[data-reveal]").forEach((node) => reveal.observe(node));
+  document.documentElement.classList.add("can-reveal");
+}

@@ -113,6 +113,7 @@ export async function mountDemo(root) {
   const run = async (name, readBytes) => {
     const request = ++latest;
     setStatus(`Decoding ${name}…`);
+    root.classList.toggle("is-loading", !current);
     try {
       const { inspection, elapsedMs } = await inspect(await readBytes(), extensionOf(name));
       if (request !== latest) {
@@ -125,6 +126,8 @@ export async function mountDemo(root) {
       render();
     } catch (error) {
       if (request === latest) setStatus(`Could not read ${name}: ${error.message ?? error}`, true);
+    } finally {
+      if (request === latest) root.classList.remove("is-loading");
     }
   };
 
