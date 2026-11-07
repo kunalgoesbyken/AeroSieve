@@ -26,9 +26,12 @@ use crate::report::RunInfo;
 struct Args {
     /// Directory of clean speech recordings.
     corpus: PathBuf,
-    /// Name to record in the report, such as "FLEURS Hindi dev".
+    /// Name of the corpus, such as "Hindi".
     #[arg(long)]
     name: String,
+    /// Where the recordings come from, such as "FLEURS dev split".
+    #[arg(long)]
+    source: String,
     /// Where to write the JSON report.
     #[arg(long)]
     out: PathBuf,
@@ -54,6 +57,7 @@ fn run(args: Args) -> Result<(), Box<dyn std::error::Error>> {
     let observations = evaluate::run(&corpus, &conditions, &policy)?;
     let info = RunInfo {
         corpus: args.name,
+        source: args.source,
         utterances: corpus.len(),
         hours: samples as f64 / f64::from(SAMPLE_RATE) / 3600.0,
         elapsed_s: started.elapsed().as_secs_f64(),

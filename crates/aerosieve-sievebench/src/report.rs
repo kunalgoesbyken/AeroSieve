@@ -10,6 +10,7 @@ use crate::noise::NoiseKind;
 #[derive(Serialize)]
 pub struct Report {
     pub corpus: String,
+    pub source: String,
     pub utterances: usize,
     pub hours: f64,
     pub elapsed_s: f64,
@@ -41,6 +42,7 @@ pub struct FamilyReport {
 
 #[derive(Serialize)]
 pub struct ConditionReport {
+    pub id: String,
     pub label: String,
     pub family: Family,
     pub clips: usize,
@@ -62,6 +64,7 @@ pub struct SnrEstimate {
 
 pub struct RunInfo {
     pub corpus: String,
+    pub source: String,
     pub utterances: usize,
     pub hours: f64,
     pub elapsed_s: f64,
@@ -119,6 +122,7 @@ fn condition_report(condition: &Condition, observations: &[&Observation]) -> Con
         }
     }
     ConditionReport {
+        id: condition.id(),
         label: condition.label(),
         family: condition.family(),
         clips: observations
@@ -205,6 +209,7 @@ pub fn build(info: RunInfo, conditions: &[Condition], observations: &[Observatio
 
     Report {
         corpus: info.corpus,
+        source: info.source,
         utterances: info.utterances,
         hours: info.hours,
         elapsed_s: info.elapsed_s,

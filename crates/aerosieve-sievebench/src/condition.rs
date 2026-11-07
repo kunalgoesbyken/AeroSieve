@@ -60,6 +60,14 @@ pub enum ToneKind {
 }
 
 impl ToneKind {
+    fn id(self) -> &'static str {
+        match self {
+            Self::DialTone => "dial_tone",
+            Self::TestTone => "test_tone",
+            Self::Hum => "hum",
+        }
+    }
+
     fn label(self) -> &'static str {
         match self {
             Self::DialTone => "dial tone",
@@ -127,6 +135,18 @@ impl Condition {
             .chain([Self::Quiet])
             .chain(tones)
             .collect()
+    }
+
+    /// Stable identifier for reports and tooling.
+    pub fn id(&self) -> String {
+        match self {
+            Self::Clean => "clean".into(),
+            Self::PhoneLine => "phone_line".into(),
+            Self::Noise { kind, snr_db } => format!("{}_noise_{snr_db}db", kind.label()),
+            Self::Overdrive { gain } => format!("overdrive_x{gain}"),
+            Self::Quiet => "quiet".into(),
+            Self::Tone(kind) => kind.id().into(),
+        }
     }
 
     pub fn label(&self) -> String {

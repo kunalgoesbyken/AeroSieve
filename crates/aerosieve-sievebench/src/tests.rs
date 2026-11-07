@@ -84,12 +84,14 @@ fn a_phone_line_preserves_in_band_audio() {
 }
 
 #[test]
-fn every_condition_has_a_unique_label() {
-    let mut labels: Vec<String> = Condition::all().iter().map(Condition::label).collect();
-    let count = labels.len();
-    labels.sort();
-    labels.dedup();
-    assert_eq!(labels.len(), count);
+fn every_condition_has_a_unique_id_and_label() {
+    for name in [Condition::id, Condition::label] {
+        let mut names: Vec<String> = Condition::all().iter().map(name).collect();
+        let count = names.len();
+        names.sort();
+        names.dedup();
+        assert_eq!(names.len(), count);
+    }
 }
 
 #[test]
@@ -114,6 +116,7 @@ fn scores_count_misses_false_rejects_and_borderline_correctly() {
     ];
     let info = RunInfo {
         corpus: "test".into(),
+        source: "synthetic".into(),
         utterances: 1,
         hours: 0.0,
         elapsed_s: 0.0,
