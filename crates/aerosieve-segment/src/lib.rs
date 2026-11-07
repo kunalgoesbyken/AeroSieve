@@ -42,6 +42,6 @@ mod tests;
 
 pub use detector::{DEFAULT_ENERGY_THRESHOLD_DBFS, EnergyDetector, SpeechDetector, WINDOW_MS};
 pub use error::SegmentError;
-pub use segmenter::{Segment, SegmentConfig, Segmenter};
+pub use segmenter::{Segment, SegmentConfig, Segmenter, StreamSegmenter};
 #[cfg(feature = "silero")]
 pub use silero::SileroDetector;

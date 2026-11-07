@@ -321,3 +321,79 @@ fn parallel_curation_matches_sequential_curation() {
     };
     assert_eq!(keys(&parallel), keys(&sequential));
 }
+
+fn session() -> Vec<f32> {
+    let speech = glottal_speech(samples(4.0));
+    [
+        silence(samples(0.5)),
+        speech.clone(),
+        silence(samples(0.8)),
+        aerosieve_fixtures::overdrive(&speech, 8.0),
+        silence(samples(0.8)),
+        aerosieve_fixtures::harmonic_speech(samples(6.0), 7),
+        silence(samples(0.2)),
+    ]
+    .concat()
+}
+
+#[test]
+fn live_inspection_in_any_chunking_matches_batch_inspection() {
+    let mut inspector = Inspector::new(
+        DecodeConfig::default(),
+        SegmentConfig::default(),
+        FilterPolicy::default(),
+    )
+    .unwrap();
+    let audio = DecodedAudio::from_samples(session(), SAMPLE_RATE);
+    let batch = inspector
+        .inspect_audio(Path::new("session"), &audio)
+        .unwrap()
+        .segments;
+    assert!(batch.iter().any(SegmentOutcome::accepted));
+    assert!(batch.iter().any(|outcome| !outcome.accepted()));
+
+    for chunk in [320, 1_234, 16_000] {
+        let mut live = inspector.live();
+        let mut outcomes = Vec::new();
+        for piece in audio.samples.chunks(chunk) {
+            outcomes.extend(live.push(piece).unwrap());
+        }
+        outcomes.extend(live.finish());
+        assert_eq!(outcomes, batch, "chunk {chunk}");
+    }
+}
+
+#[test]
+fn live_inspection_reports_how_much_audio_it_has_heard() {
+    let inspector = Inspector::new(
+        DecodeConfig::default(),
+        SegmentConfig::default(),
+        FilterPolicy::default(),
+    )
+    .unwrap();
+    let mut live = inspector.live();
+
+    live.push(&silence(samples(1.5))).unwrap();
+
+    assert!((live.heard_s() - 1.5).abs() < 1e-6);
+}
+
+#[test]
+fn live_inspection_holds_only_the_utterance_in_progress() {
+    let inspector = Inspector::new(
+        DecodeConfig::default(),
+        SegmentConfig::default(),
+        FilterPolicy::default(),
+    )
+    .unwrap();
+    let mut live = inspector.live();
+
+    live.push(&silence(samples(30.0))).unwrap();
+    assert!(live.held_s() < 0.1);
+
+    live.push(&glottal_speech(samples(8.0))).unwrap();
+    assert!(live.held_s() > 7.9);
+
+    live.push(&silence(samples(1.0))).unwrap();
+    assert!(live.held_s() < 0.1);
+}

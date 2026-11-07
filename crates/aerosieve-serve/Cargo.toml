@@ -1,0 +1,29 @@
+[package]
+name = "aerosieve-serve"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Streaming speech-quality gate: a WebSocket server that judges each utterance as it ends"
+repository = "https://github.com/kunalgoesbyken/AeroSieve"
+readme = "README.md"
+keywords = ["audio", "speech", "vad", "websocket", "streaming"]
+categories = ["multimedia::audio", "web-programming::websocket"]
+default-run = "aerosieve-serve"
+
+[dependencies]
+aerosieve.workspace = true
+aerosieve-decode.workspace = true
+axum.workspace = true
+clap.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+aerosieve-fixtures.workspace = true
+tower = { version = "0.5", features = ["util"] }

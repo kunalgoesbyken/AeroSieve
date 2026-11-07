@@ -33,6 +33,20 @@ pub trait SpeechDetector {
     fn reset(&mut self);
 }
 
+impl<D: SpeechDetector + ?Sized> SpeechDetector for &mut D {
+    fn window_size(&self) -> usize {
+        (**self).window_size()
+    }
+
+    fn probability(&mut self, window: &[f32]) -> Result<f32, SegmentError> {
+        (**self).probability(window)
+    }
+
+    fn reset(&mut self) {
+        (**self).reset();
+    }
+}
+
 /// Level-based detector with no model and no dependencies.
 ///
 /// The window's RMS level is mapped through a logistic curve centred on the

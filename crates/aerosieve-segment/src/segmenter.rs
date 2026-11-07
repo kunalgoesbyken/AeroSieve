@@ -1,4 +1,5 @@
 use std::cmp::Reverse;
+use std::collections::VecDeque;
 
 use crate::detector::SpeechDetector;
 use crate::error::SegmentError;
@@ -115,7 +116,7 @@ struct Hysteresis {
     min_silence: usize,
     open: Option<SpeechRun>,
     silence_start: Option<usize>,
-    closed: Vec<SpeechRun>,
+    closed: VecDeque<SpeechRun>,
 }
 
 impl Hysteresis {
@@ -126,7 +127,7 @@ impl Hysteresis {
             min_silence: config.ms_to_samples(config.min_silence_duration_ms),
             open: None,
             silence_start: None,
-            closed: Vec::new(),
+            closed: VecDeque::new(),
         }
     }
 
@@ -164,9 +165,163 @@ impl Hysteresis {
         self.closed.extend(self.open.take());
     }
 
-    fn finish(mut self) -> Vec<SpeechRun> {
-        self.close();
+    /// Start of the earliest run not yet handed out, open or closed.
+    fn earliest_start(&self) -> Option<usize> {
         self.closed
+            .front()
+            .or(self.open.as_ref())
+            .map(|run| run.span.start_sample)
+    }
+}
+
+/// Turns closed speech runs into final segments, one run at a time.
+struct Shaper {
+    min_speech: usize,
+    pad: usize,
+    max_len: usize,
+    min_len: usize,
+    previous_end: usize,
+}
+
+impl Shaper {
+    fn new(config: &SegmentConfig) -> Self {
+        Self {
+            min_speech: config.ms_to_samples(config.min_speech_duration_ms),
+            pad: config.ms_to_samples(config.speech_pad_ms),
+            max_len: config.seconds_to_samples(config.max_segment_s),
+            min_len: config.seconds_to_samples(config.min_segment_s).max(1),
+            previous_end: 0,
+        }
+    }
+
+    /// Drop a too-short run, otherwise pad it (never past `available`),
+    /// split it to the length bounds, and append the pieces long enough to
+    /// keep.
+    fn shape(&mut self, run: SpeechRun, available: usize, segments: &mut Vec<Segment>) {
+        if run.span.len_samples() < self.min_speech {
+            return;
+        }
+        let padded = Segment {
+            start_sample: run.span.start_sample.saturating_sub(self.pad),
+            end_sample: run.span.end_sample.saturating_add(self.pad).min(available),
+        };
+        let mut pieces = Vec::new();
+        split_to_max_len(padded, &run.dips, self.max_len, &mut pieces);
+        for piece in pieces {
+            let segment = Segment {
+                start_sample: piece.start_sample.max(self.previous_end),
+                end_sample: piece.end_sample,
+            };
+            if segment.len_samples() >= self.min_len {
+                self.previous_end = segment.end_sample;
+                segments.push(segment);
+            }
+        }
+    }
+}
+
+/// Segments audio that arrives in pieces, emitting each clip as soon as the
+/// silence that ends it has been heard.
+///
+/// Feeding the same audio in any chunking yields exactly the segments
+/// [`Segmenter::segment`] returns for the whole buffer. A clip is emitted
+/// `min_silence_duration_ms` (or `speech_pad_ms`, if longer) after its
+/// speech ends.
+pub struct StreamSegmenter<D: SpeechDetector> {
+    detector: D,
+    hysteresis: Hysteresis,
+    shaper: Shaper,
+    partial: Vec<f32>,
+    windows_seen: usize,
+    received: usize,
+}
+
+impl<D: SpeechDetector> StreamSegmenter<D> {
+    /// Start a stream; the detector is reset first.
+    pub fn new(mut detector: D, config: SegmentConfig) -> Self {
+        detector.reset();
+        Self {
+            hysteresis: Hysteresis::new(&config),
+            shaper: Shaper::new(&config),
+            partial: Vec::with_capacity(detector.window_size()),
+            detector,
+            windows_seen: 0,
+            received: 0,
+        }
+    }
+
+    /// Feed the next samples and return the segments they completed, in
+    /// order, as absolute positions in the stream.
+    pub fn push(&mut self, samples: &[f32]) -> Result<Vec<Segment>, SegmentError> {
+        let window = self.detector.window_size();
+        self.received += samples.len();
+        if window == 0 {
+            return Ok(Vec::new());
+        }
+
+        let mut rest = samples;
+        if !self.partial.is_empty() {
+            let (head, tail) = rest.split_at((window - self.partial.len()).min(rest.len()));
+            self.partial.extend_from_slice(head);
+            rest = tail;
+            if self.partial.len() == window {
+                let full = std::mem::take(&mut self.partial);
+                self.observe(&full)?;
+                self.partial = full;
+                self.partial.clear();
+            }
+        }
+        let mut windows = rest.chunks_exact(window);
+        for chunk in &mut windows {
+            self.observe(chunk)?;
+        }
+        self.partial.extend_from_slice(windows.remainder());
+
+        Ok(self.release(false))
+    }
+
+    /// End the stream and return the segments still pending. A trailing
+    /// partial window is not evaluated.
+    pub fn finish(mut self) -> Vec<Segment> {
+        self.hysteresis.close();
+        self.release(true)
+    }
+
+    /// Earliest sample a segment not yet emitted can start at. Audio before
+    /// it will never be part of a segment and can be discarded.
+    pub fn retain_from(&self) -> usize {
+        let next_window = self.windows_seen * self.detector.window_size();
+        self.hysteresis
+            .earliest_start()
+            .unwrap_or(next_window)
+            .saturating_sub(self.shaper.pad)
+            .max(self.shaper.previous_end)
+    }
+
+    fn observe(&mut self, window: &[f32]) -> Result<(), SegmentError> {
+        let start_sample = self.windows_seen * window.len();
+        let span = Segment {
+            start_sample,
+            end_sample: start_sample + window.len(),
+        };
+        let probability = self.detector.probability(window)?;
+        self.windows_seen += 1;
+        self.hysteresis.observe(span, probability);
+        Ok(())
+    }
+
+    /// Shape closed runs whose trailing padding has arrived, or all of them
+    /// when the stream has ended.
+    fn release(&mut self, ended: bool) -> Vec<Segment> {
+        let mut segments = Vec::new();
+        while let Some(run) = self.hysteresis.closed.front() {
+            if !ended && run.span.end_sample + self.shaper.pad > self.received {
+                break;
+            }
+            let run = self.hysteresis.closed.pop_front().expect("front exists");
+            self.shaper.shape(run, self.received, &mut segments);
+        }
+        segments
     }
 }
 
@@ -199,58 +354,19 @@ impl<D: SpeechDetector> Segmenter<D> {
     /// trailing partial window is not evaluated. The detector is reset first,
     /// so calls are independent.
     pub fn segment(&mut self, samples: &[f32]) -> Result<Vec<Segment>, SegmentError> {
-        self.detector.reset();
-        let window = self.detector.window_size();
-        if window == 0 {
-            return Ok(Vec::new());
-        }
-
-        let mut hysteresis = Hysteresis::new(&self.config);
-        for (index, chunk) in samples.chunks_exact(window).enumerate() {
-            let start_sample = index * window;
-            let span = Segment {
-                start_sample,
-                end_sample: start_sample + window,
-            };
-            hysteresis.observe(span, self.detector.probability(chunk)?);
-        }
-
-        Ok(self.shape(hysteresis.finish(), samples.len()))
+        let mut stream = StreamSegmenter::new(&mut self.detector, self.config.clone());
+        let mut segments = stream.push(samples)?;
+        segments.extend(stream.finish());
+        Ok(segments)
     }
 
-    /// Turn raw speech runs into final segments.
-    fn shape(&self, runs: Vec<SpeechRun>, total_samples: usize) -> Vec<Segment> {
-        let config = &self.config;
-        let min_speech = config.ms_to_samples(config.min_speech_duration_ms);
-        let pad = config.ms_to_samples(config.speech_pad_ms);
-        let max_len = config.seconds_to_samples(config.max_segment_s);
-        let min_len = config.seconds_to_samples(config.min_segment_s).max(1);
-
-        let mut pieces = Vec::new();
-        for run in runs {
-            if run.span.len_samples() < min_speech {
-                continue;
-            }
-            let padded = Segment {
-                start_sample: run.span.start_sample.saturating_sub(pad),
-                end_sample: run.span.end_sample.saturating_add(pad).min(total_samples),
-            };
-            split_to_max_len(padded, &run.dips, max_len, &mut pieces);
-        }
-
-        let mut segments = Vec::with_capacity(pieces.len());
-        let mut previous_end = 0;
-        for piece in pieces {
-            let segment = Segment {
-                start_sample: piece.start_sample.max(previous_end),
-                end_sample: piece.end_sample,
-            };
-            if segment.len_samples() >= min_len {
-                previous_end = segment.end_sample;
-                segments.push(segment);
-            }
-        }
-        segments
+    /// A [`StreamSegmenter`] with this configuration and a fresh copy of the
+    /// detector, for audio that arrives in pieces.
+    pub fn stream(&self) -> StreamSegmenter<D>
+    where
+        D: Clone,
+    {
+        StreamSegmenter::new(self.detector.clone(), self.config.clone())
     }
 }
 

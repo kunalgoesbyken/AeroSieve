@@ -41,6 +41,22 @@ The audio is scored in consecutive 32 ms windows. Then:
 
 The result is always ordered, non-overlapping, within the buffer, and no longer than `max_segment_s`. Property tests check this against a detector that returns random probabilities.
 
+## Streaming
+
+`StreamSegmenter` takes audio in pieces and returns each segment as soon as the silence that ends it, and its trailing padding, has arrived. `Segmenter::segment` is the same state machine fed the whole buffer at once, so the two cannot disagree; a property test streams random audio in random chunk sizes and checks the segments are identical.
+
+```rust
+let mut stream = segmenter.stream();
+for chunk in microphone {
+    for segment in stream.push(&chunk)? {
+        // a finished clip, in absolute sample positions
+    }
+}
+let rest = stream.finish();
+```
+
+`retain_from()` is the earliest sample a pending segment can still start at; audio before it can be dropped. While nobody is speaking that is everything but the padding, so a long stream needs memory only for the utterance in progress.
+
 ## Configuration
 
 Defaults are Silero's, plus the 3–30 s clip bounds used by Emilia-Pipe.

@@ -25,9 +25,14 @@
 //! # Ok::<(), aerosieve::PipelineError>(())
 //! ```
 //!
+//! For audio that arrives in pieces, [`Inspector::live`] returns a
+//! [`LiveInspector`] that judges each clip as soon as its closing pause
+//! arrives, with the same verdicts as inspecting the whole buffer.
+//!
 //! [WebDataset]: https://github.com/webdataset/webdataset
 //! [Emilia-Pipe]: https://arxiv.org/abs/2407.05361
 
+mod live;
 #[cfg(test)]
 mod tests;
 
@@ -44,6 +49,7 @@ pub use aerosieve_acoustic::{FilterPolicy, QualityMetrics, RejectReason};
 pub use aerosieve_decode::{DecodeConfig, DecodedAudio};
 pub use aerosieve_segment::{EnergyDetector, Segment, SegmentConfig, SpeechDetector};
 pub use aerosieve_shard::{ShardConfig, ShardStats};
+pub use live::LiveInspector;
 
 use aerosieve_lexical::RuleEngine;
 use aerosieve_segment::Segmenter;
@@ -283,12 +289,7 @@ impl<D: SpeechDetector> Inspector<D> {
             .into_iter()
             .map(|segment| {
                 let clip = &audio.samples[segment.start_sample..segment.end_sample];
-                let metrics = aerosieve_acoustic::score(clip, audio.sample_rate, full_scale);
-                SegmentOutcome {
-                    segment,
-                    metrics,
-                    rejected: self.policy.evaluate(&metrics),
-                }
+                judge(&self.policy, segment, clip, audio.sample_rate, full_scale)
             })
             .collect();
 
@@ -300,6 +301,19 @@ impl<D: SpeechDetector> Inspector<D> {
             applied_gain_db: audio.applied_gain_db,
             segments,
         })
+    }
+
+    /// A [`LiveInspector`] with this configuration, for audio that arrives
+    /// in pieces at the segmenter's sample rate.
+    pub fn live(&self) -> LiveInspector<D>
+    where
+        D: Clone,
+    {
+        LiveInspector::new(
+            self.segmenter.stream(),
+            self.policy.clone(),
+            self.segmenter.config().sample_rate,
+        )
     }
 }
 
@@ -468,6 +482,21 @@ impl<D: SpeechDetector + Clone + Send + Sync> Pipeline<D> {
             }
         }
         results
+    }
+}
+
+fn judge(
+    policy: &FilterPolicy,
+    segment: Segment,
+    clip: &[f32],
+    sample_rate: u32,
+    full_scale: f32,
+) -> SegmentOutcome {
+    let metrics = aerosieve_acoustic::score(clip, sample_rate, full_scale);
+    SegmentOutcome {
+        segment,
+        metrics,
+        rejected: policy.evaluate(&metrics),
     }
 }
 

@@ -1,7 +1,10 @@
 use aerosieve_fixtures::{Rng, SAMPLE_RATE, samples, silence, tone};
 use proptest::prelude::*;
 
-use crate::{EnergyDetector, Segment, SegmentConfig, SegmentError, Segmenter, SpeechDetector};
+use crate::{
+    EnergyDetector, Segment, SegmentConfig, SegmentError, Segmenter, SpeechDetector,
+    StreamSegmenter,
+};
 
 const WINDOW: usize = 512;
 
@@ -309,7 +312,99 @@ fn with_threshold_derives_the_exit_threshold_like_silero() {
     );
 }
 
+/// Feeds `audio` to a [`StreamSegmenter`] in pieces of the given sizes,
+/// cycling through them, and checks that no emitted segment starts before
+/// the sample the stream said it could still need.
+fn stream_in_chunks<D: SpeechDetector>(
+    mut stream: StreamSegmenter<D>,
+    audio: &[f32],
+    chunk_sizes: &[usize],
+) -> Vec<Segment> {
+    let mut segments = Vec::new();
+    let mut rest = audio;
+    for &size in chunk_sizes.iter().cycle() {
+        if rest.is_empty() {
+            break;
+        }
+        let (chunk, tail) = rest.split_at(size.min(rest.len()));
+        let retained_from = stream.retain_from();
+        let emitted = stream.push(chunk).unwrap();
+        assert!(
+            emitted
+                .iter()
+                .all(|segment| segment.start_sample >= retained_from)
+        );
+        segments.extend(emitted);
+        rest = tail;
+    }
+    segments.extend(stream.finish());
+    segments
+}
+
+#[test]
+fn a_clip_is_emitted_as_soon_as_its_closing_silence_arrives() {
+    let config = SegmentConfig::default();
+    let closing = ms(config.min_silence_duration_ms) + 2 * WINDOW;
+    let audio = concat(&[
+        silence(samples(0.5)),
+        speech(samples(4.0)),
+        silence(closing),
+    ]);
+    let mut stream = StreamSegmenter::new(EnergyDetector::new(SAMPLE_RATE), config);
+
+    let emitted = stream.push(&audio).unwrap();
+
+    assert_eq!(emitted.len(), 1);
+    assert!(stream.finish().is_empty());
+}
+
+#[test]
+fn an_idle_stream_releases_everything_but_the_padding() {
+    let config = SegmentConfig::default();
+    let pad = ms(config.speech_pad_ms);
+    let mut stream = StreamSegmenter::new(EnergyDetector::new(SAMPLE_RATE), config);
+
+    stream.push(&silence(samples(5.0))).unwrap();
+
+    assert!(stream.retain_from() + pad + WINDOW >= samples(5.0));
+}
+
+#[test]
+fn a_long_utterance_holds_audio_from_its_start() {
+    let mut stream =
+        StreamSegmenter::new(EnergyDetector::new(SAMPLE_RATE), SegmentConfig::default());
+
+    stream.push(&silence(samples(1.0))).unwrap();
+    stream.push(&speech(samples(10.0))).unwrap();
+
+    assert!(stream.retain_from() <= samples(1.0));
+}
+
 proptest! {
+    #[test]
+    fn streaming_in_any_chunking_matches_batch_segmentation(
+        len in 0usize..30_000,
+        seed in any::<u64>(),
+        chunk_sizes in prop::collection::vec(1usize..3_000, 1..6),
+        speech_pad_ms in 0u32..400,
+        min_silence_duration_ms in 0u32..600,
+    ) {
+        let config = SegmentConfig {
+            speech_pad_ms,
+            min_silence_duration_ms,
+            ..short_clip_config()
+        };
+        let audio = silence(len);
+
+        let batch = Segmenter::new(ScriptedDetector::new(seed), config.clone())
+            .segment(&audio)
+            .unwrap();
+        let stream = StreamSegmenter::new(ScriptedDetector::new(seed), config);
+        let streamed = stream_in_chunks(stream, &audio, &chunk_sizes);
+
+        prop_assert_eq!(streamed, batch);
+    }
+
     #[test]
     fn any_detector_output_yields_well_formed_bounded_segments(
         len in 0usize..40_000,
