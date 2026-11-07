@@ -173,6 +173,34 @@ fn files_at_any_source_rate_are_resampled_and_accepted() {
 }
 
 #[test]
+fn clipping_is_detected_after_normalization_turns_a_hot_file_down() {
+    let workspace = Workspace::new();
+    let path = workspace.root.path().join("hot.wav");
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: SAMPLE_RATE,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut wav = hound::WavWriter::create(&path, spec).unwrap();
+    for sample in aerosieve_fixtures::overdrive(&recording().samples, 25.0) {
+        wav.write_sample((sample * f32::from(i16::MAX)) as i16)
+            .unwrap();
+    }
+    wav.finalize().unwrap();
+
+    let mut pipeline = Pipeline::new(workspace.config()).unwrap();
+    let outcome = pipeline.process_file(&path, None).unwrap();
+    pipeline.finish().unwrap();
+
+    assert!(
+        outcome.applied_gain_db < 0.0,
+        "the file should be turned down"
+    );
+    assert_eq!(outcome.segments[0].rejected, Some(RejectReason::Clipping));
+}
+
+#[test]
 fn an_undecodable_file_is_counted_as_failed() {
     let workspace = Workspace::new();
     let mut pipeline = Pipeline::new(workspace.config()).unwrap();

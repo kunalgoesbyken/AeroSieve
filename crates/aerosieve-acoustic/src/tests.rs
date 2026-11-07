@@ -14,7 +14,7 @@ fn sine(len: usize, freq_hz: f32, amplitude: f32) -> Vec<f32> {
 }
 
 fn verdict(buffer: &[f32]) -> Option<RejectReason> {
-    FilterPolicy::default().evaluate(&score(buffer, SAMPLE_RATE))
+    FilterPolicy::default().evaluate(&score(buffer, SAMPLE_RATE, FULL_SCALE))
 }
 
 #[test]
@@ -29,7 +29,7 @@ fn default_policy_accepts_clean_speech_across_seeds_and_levels() {
 
 #[test]
 fn silence_is_rejected_as_silence() {
-    let metrics = score(&vec![0.0; ONE_SECOND], SAMPLE_RATE);
+    let metrics = score(&vec![0.0; ONE_SECOND], SAMPLE_RATE, FULL_SCALE);
     assert_eq!(metrics.rms_dbfs, f32::NEG_INFINITY);
     assert_eq!(
         FilterPolicy::default().evaluate(&metrics),
@@ -46,7 +46,7 @@ fn faint_speech_is_rejected_as_too_quiet() {
 #[test]
 fn overdriven_speech_is_rejected() {
     let clipped = overdrive(&at_dbfs(harmonic_speech(ONE_SECOND, 11), -20.0), 25.0);
-    assert!(clip_ratio(&clipped) > FilterPolicy::default().max_clip_ratio);
+    assert!(clip_ratio(&clipped, FULL_SCALE) > FilterPolicy::default().max_clip_ratio);
     assert!(matches!(
         verdict(&clipped),
         Some(RejectReason::Clipping | RejectReason::TooLoud)
@@ -57,8 +57,15 @@ fn overdriven_speech_is_rejected() {
 fn clip_ratio_counts_only_samples_at_full_scale() {
     let mut buffer = vec![0.5f32; 100];
     buffer[..10].fill(1.0);
-    assert!((clip_ratio(&buffer) - 0.10).abs() < 1e-6);
-    assert_eq!(clip_ratio(&[0.0; 10]), 0.0);
+    assert!((clip_ratio(&buffer, FULL_SCALE) - 0.10).abs() < 1e-6);
+    assert_eq!(clip_ratio(&[0.0; 10], FULL_SCALE), 0.0);
+}
+
+#[test]
+fn clip_ratio_is_measured_against_the_given_full_scale() {
+    let turned_down: Vec<f32> = [1.0f32, 1.0, 0.3, 0.3].iter().map(|s| s * 0.5).collect();
+    assert_eq!(clip_ratio(&turned_down, FULL_SCALE), 0.0);
+    assert!((clip_ratio(&turned_down, 0.5) - 0.5).abs() < 1e-6);
 }
 
 #[test]
@@ -75,7 +82,7 @@ fn flatness_floor_is_tunable() {
         ..FilterPolicy::default()
     };
     assert_ne!(
-        lenient.evaluate(&score(&tone, SAMPLE_RATE)),
+        lenient.evaluate(&score(&tone, SAMPLE_RATE, FULL_SCALE)),
         Some(RejectReason::Tonal)
     );
 }
@@ -160,7 +167,7 @@ fn snr_from_g_interpolates_and_clamps() {
 
 #[test]
 fn empty_buffer_scores_as_silence() {
-    let metrics = score(&[], SAMPLE_RATE);
+    let metrics = score(&[], SAMPLE_RATE, FULL_SCALE);
     assert_eq!(metrics.rms_dbfs, f32::NEG_INFINITY);
     assert_eq!(metrics.wada_snr_db, f32::NEG_INFINITY);
     assert_eq!(metrics.clip_ratio, 0.0);
@@ -174,7 +181,7 @@ fn empty_buffer_scores_as_silence() {
 #[test]
 fn single_sample_is_never_accepted() {
     for value in [0.0f32, 0.5, 1.0, -1.0] {
-        let metrics = score(&[value], SAMPLE_RATE);
+        let metrics = score(&[value], SAMPLE_RATE, FULL_SCALE);
         assert_eq!(metrics.wada_snr_db, f32::NEG_INFINITY);
         assert!(!FilterPolicy::default().accepts(&metrics));
     }
@@ -182,7 +189,7 @@ fn single_sample_is_never_accepted() {
 
 #[test]
 fn dc_offset_reads_as_no_speech() {
-    let metrics = score(&vec![0.25f32; ONE_SECOND], SAMPLE_RATE);
+    let metrics = score(&vec![0.25f32; ONE_SECOND], SAMPLE_RATE, FULL_SCALE);
     assert_eq!(metrics.wada_snr_db, SNR_MIN_DB);
     assert!(!FilterPolicy::default().accepts(&metrics));
 }
@@ -192,14 +199,14 @@ fn non_finite_samples_are_never_accepted() {
     for poison in [f32::NAN, f32::INFINITY] {
         let mut buffer = at_dbfs(harmonic_speech(ONE_SECOND, 1), -20.0);
         buffer[100] = poison;
-        assert!(!FilterPolicy::default().accepts(&score(&buffer, SAMPLE_RATE)));
+        assert!(!FilterPolicy::default().accepts(&score(&buffer, SAMPLE_RATE, FULL_SCALE)));
     }
 }
 
 #[test]
 fn buffers_around_every_length_threshold_do_not_panic() {
     for len in [0usize, 1, 2, 3, 255, 256, 257, 1023, 1024, 1025] {
-        let metrics = score(&harmonic_speech(len, 42), SAMPLE_RATE);
+        let metrics = score(&harmonic_speech(len, 42), SAMPLE_RATE, FULL_SCALE);
         assert!(metrics.clip_ratio.is_finite());
         assert!(metrics.spectral_flatness.is_finite());
     }
@@ -208,7 +215,10 @@ fn buffers_around_every_length_threshold_do_not_panic() {
 #[test]
 fn score_is_deterministic() {
     let buffer = harmonic_speech(ONE_SECOND, 555);
-    assert_eq!(score(&buffer, SAMPLE_RATE), score(&buffer, SAMPLE_RATE));
+    assert_eq!(
+        score(&buffer, SAMPLE_RATE, FULL_SCALE),
+        score(&buffer, SAMPLE_RATE, FULL_SCALE)
+    );
 }
 
 #[test]

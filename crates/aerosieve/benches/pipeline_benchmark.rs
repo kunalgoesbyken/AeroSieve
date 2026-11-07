@@ -67,7 +67,13 @@ fn bench_stages(c: &mut Criterion) {
         b.iter(|| segmenter.segment(black_box(&minute)).unwrap());
     });
     group.bench_function("score_clip", |b| {
-        b.iter(|| aerosieve::acoustic::score(black_box(&clip), SAMPLE_RATE))
+        b.iter(|| {
+            aerosieve::acoustic::score(
+                black_box(&clip),
+                SAMPLE_RATE,
+                aerosieve::acoustic::FULL_SCALE,
+            )
+        })
     });
     group.bench_function("normalize_transcript", |b| {
         b.iter(|| rules.normalize(black_box(TRANSCRIPT)))

@@ -242,13 +242,14 @@ impl<D: SpeechDetector> Inspector<D> {
     ) -> Result<FileOutcome, PipelineError> {
         ensure_matching_rates(audio.sample_rate, self.segmenter.config())?;
 
+        let full_scale = audio.full_scale();
         let segments = self
             .segmenter
             .segment(&audio.samples)?
             .into_iter()
             .map(|segment| {
                 let clip = &audio.samples[segment.start_sample..segment.end_sample];
-                let metrics = aerosieve_acoustic::score(clip, audio.sample_rate);
+                let metrics = aerosieve_acoustic::score(clip, audio.sample_rate, full_scale);
                 SegmentOutcome {
                     segment,
                     metrics,

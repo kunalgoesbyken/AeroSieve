@@ -63,6 +63,11 @@ impl DecodedAudio {
     pub fn duration_s(&self) -> f32 {
         self.samples.len() as f32 / self.sample_rate as f32
     }
+
+    /// The magnitude the source's full scale sits at after normalization.
+    pub fn full_scale(&self) -> f32 {
+        10f32.powf(self.applied_gain_db / 20.0)
+    }
 }
 
 #[derive(Debug, Clone)]

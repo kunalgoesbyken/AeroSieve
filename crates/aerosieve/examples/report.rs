@@ -6,7 +6,7 @@
 
 use std::time::Instant;
 
-use aerosieve::acoustic::score;
+use aerosieve::acoustic::{FULL_SCALE, score};
 use aerosieve::{DecodedAudio, FilterPolicy, Pipeline, PipelineConfig};
 use aerosieve_fixtures::{
     SAMPLE_RATE, glottal_speech, mixed_corpus, overdrive, samples, silence, tone, white_noise,
@@ -39,7 +39,7 @@ fn print_filter_verdicts() {
         "INPUT", "SNR dB", "dBFS", "FLATNESS"
     );
     for (name, audio) in cases {
-        let metrics = score(&audio, SAMPLE_RATE);
+        let metrics = score(&audio, SAMPLE_RATE, FULL_SCALE);
         let verdict = policy
             .evaluate(&metrics)
             .map_or("accept", |reason| reason.as_str());
