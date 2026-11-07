@@ -5,9 +5,9 @@ Deterministic acoustic quality scoring for mono `f32` audio. No models and no ra
 `score` measures; `FilterPolicy` judges. They are separate so thresholds can be tuned without touching the measurements.
 
 ```rust
-use aerosieve_acoustic::{FilterPolicy, score};
+use aerosieve_acoustic::{FULL_SCALE, FilterPolicy, score};
 
-let metrics = score(&samples, 16_000);
+let metrics = score(&samples, 16_000, FULL_SCALE);
 match FilterPolicy::default().evaluate(&metrics) {
     None => println!("accepted"),
     Some(reason) => println!("rejected: {reason}"),
@@ -20,7 +20,7 @@ match FilterPolicy::default().evaluate(&metrics) {
 |---|---|
 | `wada_snr_db` | SNR estimated from the amplitude distribution alone (WADA; Kim & Stern, Interspeech 2008), in `[-20, 100]` dB |
 | `rms_dbfs` | RMS level relative to full scale |
-| `clip_ratio` | Fraction of samples at or beyond ±0.999 |
+| `clip_ratio` | Fraction of samples at or beyond 0.999 of the source's full scale. Pass a lower `full_scale` if the buffer was turned down after recording, so leveling cannot hide clipping |
 | `spectral_flatness` | Wiener entropy over the 300–3400 Hz speech band: near 1 is noise-like, near 0 is tonal |
 
 WADA models clean speech as Gamma(0.4) and noise as Gaussian. A signal that is not speech-like, such as a pure tone, reads as low SNR however clean it is. `src/wada_table.rs` documents how the lookup table was generated.

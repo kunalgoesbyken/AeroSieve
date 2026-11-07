@@ -17,14 +17,16 @@ pub struct Utterance {
 /// Every audio file directly inside `dir` long enough to yield a clip,
 /// sorted by name so runs are reproducible.
 pub fn load(dir: &Path, limit: Option<usize>) -> Result<Vec<Utterance>, DecodeError> {
-    let mut paths = audio_files(dir);
-    paths.truncate(limit.unwrap_or(usize::MAX));
+    let limit = limit.unwrap_or(usize::MAX);
     let config = DecodeConfig {
         normalize: false,
         ..DecodeConfig::default()
     };
-    let mut utterances = Vec::with_capacity(paths.len());
-    for path in paths {
+    let mut utterances = Vec::new();
+    for path in audio_files(dir) {
+        if utterances.len() == limit {
+            break;
+        }
         let audio = decode_file(&path, &config)?;
         if audio.duration_s() < MIN_UTTERANCE_S {
             continue;

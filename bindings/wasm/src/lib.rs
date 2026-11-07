@@ -11,25 +11,15 @@ use std::path::Path;
 
 use aerosieve::decode::decode_reader;
 use aerosieve::{
-    DecodeConfig, DecodedAudio, FileOutcome, FilterPolicy, Inspector, QualityMetrics, SegmentConfig,
+    ClipSummary, DecodeConfig, DecodedAudio, FileOutcome, FilterPolicy, Inspector, SegmentConfig,
+    SegmentOutcome,
 };
 use serde::Serialize;
 use serde_wasm_bindgen::Serializer;
 use wasm_bindgen::prelude::*;
 
-const ACCEPTED: &str = "accept";
-
 /// Longest recording the browser demo will decode, in seconds.
 const MAX_DURATION_S: f32 = 15.0 * 60.0;
-
-#[derive(Serialize)]
-struct Clip {
-    start_s: f32,
-    duration_s: f32,
-    #[serde(flatten)]
-    metrics: QualityMetrics,
-    verdict: &'static str,
-}
 
 /// A recording that has been decoded, segmented, and scored.
 #[wasm_bindgen]
@@ -83,18 +73,16 @@ impl Inspection {
         } else {
             serde_wasm_bindgen::from_value(policy)?
         };
-        let rate = self.outcome.sample_rate as f32;
-        let clips: Vec<Clip> = self
+        let clips: Vec<ClipSummary> = self
             .outcome
             .segments
             .iter()
-            .map(|clip| Clip {
-                start_s: clip.segment.start_sample as f32 / rate,
-                duration_s: clip.segment.duration_s(self.outcome.sample_rate),
-                metrics: clip.metrics,
-                verdict: policy
-                    .evaluate(&clip.metrics)
-                    .map_or(ACCEPTED, |reason| reason.as_str()),
+            .map(|clip| {
+                SegmentOutcome {
+                    rejected: policy.evaluate(&clip.metrics),
+                    ..clip.clone()
+                }
+                .summary(self.outcome.sample_rate)
             })
             .collect();
         Ok(clips.serialize(&Serializer::json_compatible())?)
@@ -102,12 +90,7 @@ impl Inspection {
 
     /// Peak amplitude in `points` equal buckets, for drawing a waveform.
     pub fn envelope(&self, points: usize) -> Vec<f32> {
-        let samples = &self.audio.samples;
-        let bucket = samples.len().div_ceil(points.max(1)).max(1);
-        samples
-            .chunks(bucket)
-            .map(|chunk| chunk.iter().fold(0.0f32, |peak, s| peak.max(s.abs())))
-            .collect()
+        self.audio.peaks(points)
     }
 
     /// The normalized 16 kHz mono samples, for playback.

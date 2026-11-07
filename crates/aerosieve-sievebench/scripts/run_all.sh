@@ -24,8 +24,11 @@ run() {
 fetch en "https://huggingface.co/datasets/hf-internal-testing/librispeech_asr_dummy/resolve/refs%2Fconvert%2Fparquet/clean/validation/0000.parquet"
 run en "English" "LibriSpeech dev-clean sample"
 
+corpora='"en"'
 for pair in hi:Hindi ta:Tamil bn:Bengali te:Telugu mr:Marathi; do
   code="${pair%%:*}"
   fetch "$code" "https://huggingface.co/api/datasets/google/fleurs/parquet/${code}_in/validation/0.parquet"
   run "$code" "${pair#*:}" "FLEURS dev split"
+  corpora="$corpora,\"$code\""
 done
+printf '[%s]\n' "$corpora" > "$root/site/data/sievebench-index.json"

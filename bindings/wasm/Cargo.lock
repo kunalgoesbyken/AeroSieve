@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "aerosieve"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "aerosieve-acoustic",
  "aerosieve-decode",
@@ -18,14 +18,14 @@ dependencies = [
 
 [[package]]
 name = "aerosieve-acoustic"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "aerosieve-decode"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "aerosieve-acoustic",
  "rubato",
@@ -35,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "aerosieve-lexical"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "regex",
  "serde",
@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "aerosieve-segment"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "aerosieve-acoustic",
  "thiserror",
@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "aerosieve-shard"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "hound",
  "serde",
@@ -65,7 +65,7 @@ dependencies = [
 
 [[package]]
 name = "aerosieve-wasm"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "aerosieve",
  "serde",

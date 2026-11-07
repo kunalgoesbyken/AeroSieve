@@ -113,6 +113,7 @@ fn scores_count_misses_false_rejects_and_borderline_correctly() {
         ),
         observation(1, Expect::Reject, Verdict::NoClip),
         observation(1, Expect::Reject, Verdict::Kept),
+        observation(1, Expect::Reject, Verdict::Rejected(RejectReason::TooQuiet)),
     ];
     let info = RunInfo {
         corpus: "test".into(),
@@ -125,6 +126,7 @@ fn scores_count_misses_false_rejects_and_borderline_correctly() {
 
     let report = build(info, &conditions, &observations);
 
+    assert_eq!(report.overall.unsegmented, 1);
     assert_eq!(report.overall.should_reject, 2);
     assert_eq!(report.overall.caught, 1);
     assert_eq!(report.overall.falsely_rejected, 1);

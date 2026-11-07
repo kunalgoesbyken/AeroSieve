@@ -6,9 +6,17 @@ import { mountTabs } from "./tabs.js";
 
 mountCopyButtons(document);
 mountTabs(document);
-mountHero(document.querySelector("[data-hero]"));
-mountDemo(document.querySelector("[data-demo]"));
-mountResults(document.querySelector("[data-results]"));
+const mount = (selector, start) => {
+  const root = document.querySelector(selector);
+  start(root).catch((error) => {
+    root.dataset.failed = "";
+    console.error(error);
+  });
+};
+
+mount("[data-hero]", mountHero);
+mount("[data-demo]", mountDemo);
+mount("[data-results]", mountResults);
 
 const reveal = new IntersectionObserver(
   (entries) =>

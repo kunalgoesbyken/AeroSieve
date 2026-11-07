@@ -65,6 +65,15 @@ impl DecodedAudio {
         self.samples.len() as f32 / self.sample_rate as f32
     }
 
+    /// Peak magnitude in each of `points` equal spans, for drawing a waveform.
+    pub fn peaks(&self, points: usize) -> Vec<f32> {
+        let span = self.samples.len().div_ceil(points.max(1)).max(1);
+        self.samples
+            .chunks(span)
+            .map(|chunk| chunk.iter().fold(0.0f32, |peak, s| peak.max(s.abs())))
+            .collect()
+    }
+
     /// The magnitude the source's full scale sits at after normalization.
     pub fn full_scale(&self) -> f32 {
         10f32.powf(self.applied_gain_db / 20.0)

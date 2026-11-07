@@ -51,7 +51,7 @@ Defaults are Silero's, plus the 3–30 s clip bounds used by Emilia-Pipe.
 | `threshold` | `0.5` | Probability at which speech starts |
 | `neg_threshold` | `0.35` | Probability below which a window counts as silence |
 | `min_speech_duration_ms` | `250` | Shorter speech runs are discarded |
-| `min_silence_duration_ms` | `100` | Shorter dips are bridged |
+| `min_silence_duration_ms` | `500` | Shorter dips are bridged. Silero uses 100; for building clips that cuts speech at every word gap |
 | `speech_pad_ms` | `30` | Padding on both ends |
 | `min_segment_s` | `3.0` | Shorter segments are dropped |
 | `max_segment_s` | `30.0` | Longer segments are split; `0` disables splitting |

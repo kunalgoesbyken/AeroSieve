@@ -8,7 +8,9 @@ use crate::noise::{NoiseKind, mix_at_snr};
 
 const NOISE_SNRS_DB: [f32; 6] = [30.0, 20.0, 15.0, 10.0, 5.0, 0.0];
 const OVERDRIVE_GAINS: [f32; 4] = [2.0, 4.0, 8.0, 16.0];
-const QUIET_DBFS: f32 = -55.0;
+/// Quiet enough to fail the level floor even after leveling adds 3 dB, loud
+/// enough that the segmenter still cuts clips for the filters to judge.
+const QUIET_DBFS: f32 = -46.0;
 const PHONE_RATE: u32 = 8_000;
 const MU: f32 = 255.0;
 

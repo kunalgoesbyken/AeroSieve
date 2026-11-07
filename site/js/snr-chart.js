@@ -3,7 +3,7 @@ const SIZE = { width: 560, height: 340 };
 const PAD = { top: 20, right: 76, bottom: 44, left: 48 };
 const RANGE_DB = [-5, 30];
 const TICKS_DB = [0, 10, 20, 30];
-const LABEL_GAP = 14;
+const LABEL_GAP = 20;
 const SERIES = [
   { noise: "white", label: "White", color: "var(--series-1)" },
   { noise: "pink", label: "Pink", color: "var(--series-2)" },
@@ -89,9 +89,9 @@ export function renderSnrChart(container, report) {
   const lines = SERIES.map((series) => ({
     series,
     points: report.snr_estimates
-      .filter((estimate) => estimate.noise === series.noise)
+      .filter((estimate) => estimate.noise === series.noise && Number.isFinite(estimate.median_estimate_db))
       .sort((a, b) => a.injected_snr_db - b.injected_snr_db),
-  }));
+  })).filter(({ points }) => points.length > 0);
   chart.append(axes(), ...lines.map(({ series, points }) => seriesGroup(series, points, showTip)), ...endLabels(lines));
   chart.addEventListener("pointerleave", () => (tooltip.hidden = true));
   container.querySelector("[data-chart]").replaceChildren(chart);

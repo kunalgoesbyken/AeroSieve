@@ -1,9 +1,9 @@
 import { element } from "./dom.js";
+import { fetchJson } from "./http.js";
 import { renderSnrChart } from "./snr-chart.js";
 
-const CORPORA = ["en", "hi", "ta", "bn", "te", "mr"];
-
 const percent = (value) => `${Math.round(value * 100)}%`;
+const precisePercent = (value) => `${(value * 100).toFixed(1)}%`;
 
 const keptShare = (report, id) => {
   const condition = report.conditions.find((entry) => entry.id === id);
@@ -26,8 +26,8 @@ const rowFor = (report) =>
     element("td", { text: `${Math.round(report.hours * 60)} min` }),
     barCell(keptShare(report, "clean")),
     barCell(keptShare(report, "phone_line")),
-    element("td", { className: "strong", text: percent(report.overall.recall) }),
-    element("td", { text: percent(rightReasonShare(report)) }),
+    element("td", { className: "strong", text: precisePercent(report.overall.recall) }),
+    element("td", { text: precisePercent(rightReasonShare(report)) }),
   ]);
 
 const totals = (reports) => {
@@ -53,9 +53,8 @@ const mountChartSwitch = (root, reports) => {
 };
 
 export async function mountResults(root) {
-  const reports = await Promise.all(
-    CORPORA.map(async (id) => (await fetch(`data/sievebench-${id}.json`)).json()),
-  );
+  const corpora = await fetchJson("data/sievebench-index.json");
+  const reports = await Promise.all(corpora.map((id) => fetchJson(`data/sievebench-${id}.json`)));
   const summary = totals(reports);
   root.querySelector("[data-languages]").replaceChildren(...reports.map(rowFor));
   Object.entries(summary).forEach(([name, value]) =>

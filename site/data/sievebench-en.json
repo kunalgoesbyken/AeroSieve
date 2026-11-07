@@ -3,7 +3,7 @@
   "source": "LibriSpeech dev-clean sample",
   "utterances": 63,
   "hours": 0.12766527777777778,
-  "elapsed_s": 3.8441428,
+  "elapsed_s": 4.3570525,
   "policy": {
     "min_snr_db": 10.0,
     "max_clip_ratio": 0.01,
@@ -12,61 +12,67 @@
     "min_spectral_flatness": 0.005
   },
   "overall": {
-    "should_reject": 822,
-    "caught": 817,
-    "should_keep": 593,
-    "falsely_rejected": 24,
-    "recall": 0.9939172749391727,
-    "precision": 0.9714625445897741,
-    "false_reject_rate": 0.04047217537942664
+    "unsegmented": 43,
+    "should_reject": 814,
+    "caught": 809,
+    "should_keep": 569,
+    "falsely_rejected": 0,
+    "recall": 0.9938574938574939,
+    "precision": 1.0,
+    "false_reject_rate": 0.0
   },
   "families": [
     {
       "family": "control",
+      "unsegmented": 11,
       "should_reject": 0,
       "caught": 0,
-      "should_keep": 137,
-      "falsely_rejected": 11,
+      "should_keep": 126,
+      "falsely_rejected": 0,
       "recall": 0.0,
       "precision": 0.0,
-      "false_reject_rate": 0.08029197080291971,
+      "false_reject_rate": 0.0,
       "right_reason": 0
     },
     {
       "family": "noise",
+      "unsegmented": 9,
       "should_reject": 378,
       "caught": 373,
-      "should_keep": 388,
-      "falsely_rejected": 9,
+      "should_keep": 379,
+      "falsely_rejected": 0,
       "recall": 0.9867724867724867,
-      "precision": 0.9764397905759162,
-      "false_reject_rate": 0.023195876288659795,
+      "precision": 1.0,
+      "false_reject_rate": 0.0,
       "right_reason": 373
     },
     {
       "family": "clipping",
-      "should_reject": 192,
-      "caught": 192,
-      "should_keep": 68,
-      "falsely_rejected": 4,
+      "unsegmented": 5,
+      "should_reject": 191,
+      "caught": 191,
+      "should_keep": 64,
+      "falsely_rejected": 0,
       "recall": 1.0,
-      "precision": 0.9795918367346939,
-      "false_reject_rate": 0.058823529411764705,
-      "right_reason": 192
+      "precision": 1.0,
+      "false_reject_rate": 0.0,
+      "right_reason": 191
     },
     {
       "family": "level",
-      "should_reject": 63,
-      "caught": 63,
+      "unsegmented": 18,
+      "should_reject": 56,
+      "caught": 56,
       "should_keep": 0,
       "falsely_rejected": 0,
       "recall": 1.0,
       "precision": 1.0,
       "false_reject_rate": 0.0,
-      "right_reason": 63
+      "right_reason": 56
     },
     {
       "family": "tone",
+      "unsegmented": 0,
       "should_reject": 189,
       "caught": 189,
       "should_keep": 0,
@@ -398,14 +404,16 @@
     },
     {
       "id": "quiet",
-      "label": "quiet (-55 dBFS)",
+      "label": "quiet (-46 dBFS)",
       "family": "level",
-      "clips": 0,
+      "clips": 56,
       "kept": 0,
-      "no_clip": 63,
-      "rejected": {},
+      "no_clip": 18,
+      "rejected": {
+        "too_quiet": 56
+      },
       "expected": {
-        "reject": 63
+        "reject": 74
       }
     },
     {

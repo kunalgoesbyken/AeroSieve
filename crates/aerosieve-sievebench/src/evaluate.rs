@@ -43,43 +43,30 @@ pub fn run(
     conditions: &[Condition],
     policy: &FilterPolicy,
 ) -> Result<Vec<Observation>, EvaluateError> {
-    let inspector = || {
-        Inspector::new(
-            DecodeConfig::default(),
-            SegmentConfig::default(),
-            policy.clone(),
-        )
-    };
-    inspector()?;
-
     let jobs: Vec<(usize, usize)> = (0..conditions.len())
         .flat_map(|condition| (0..corpus.len()).map(move |utterance| (condition, utterance)))
         .collect();
 
     jobs.par_iter()
-        .map_init(
-            || inspector().expect("configuration validated above"),
-            |inspector, &(condition, utterance)| {
-                observe(
-                    inspector,
-                    &conditions[condition],
-                    condition,
-                    corpus,
-                    utterance,
-                )
-            },
-        )
+        .map(|&(condition, utterance)| {
+            observe(policy, &conditions[condition], condition, corpus, utterance)
+        })
         .collect::<Result<Vec<_>, _>>()
         .map(|batches| batches.into_iter().flatten().collect())
 }
 
 fn observe(
-    inspector: &mut Inspector,
+    policy: &FilterPolicy,
     condition: &Condition,
     index: usize,
     corpus: &[Utterance],
     utterance: usize,
 ) -> Result<Vec<Observation>, EvaluateError> {
+    let mut inspector = Inspector::new(
+        DecodeConfig::default(),
+        SegmentConfig::default(),
+        policy.clone(),
+    )?;
     let degraded = condition.apply(corpus, utterance)?;
     let audio = decode_reader(
         Cursor::new(wav_bytes(&degraded.samples)?),

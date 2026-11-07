@@ -3,7 +3,7 @@
   "source": "FLEURS dev split",
   "utterances": 402,
   "hours": 1.4483833333333334,
-  "elapsed_s": 44.3636497,
+  "elapsed_s": 50.9038713,
   "policy": {
     "min_snr_db": 10.0,
     "max_clip_ratio": 0.01,
@@ -12,17 +12,19 @@
     "min_spectral_flatness": 0.005
   },
   "overall": {
-    "should_reject": 5177,
-    "caught": 5177,
+    "unsegmented": 16,
+    "should_reject": 5332,
+    "caught": 5328,
     "should_keep": 3636,
     "falsely_rejected": 524,
-    "recall": 1.0,
-    "precision": 0.908086300649009,
+    "recall": 0.9992498124531133,
+    "precision": 0.9104579630895421,
     "false_reject_rate": 0.14411441144114412
   },
   "families": [
     {
       "family": "control",
+      "unsegmented": 0,
       "should_reject": 0,
       "caught": 0,
       "should_keep": 804,
@@ -34,6 +36,7 @@
     },
     {
       "family": "noise",
+      "unsegmented": 0,
       "should_reject": 2412,
       "caught": 2412,
       "should_keep": 2412,
@@ -45,6 +48,7 @@
     },
     {
       "family": "clipping",
+      "unsegmented": 0,
       "should_reject": 1157,
       "caught": 1157,
       "should_keep": 420,
@@ -56,17 +60,19 @@
     },
     {
       "family": "level",
-      "should_reject": 402,
-      "caught": 402,
+      "unsegmented": 16,
+      "should_reject": 557,
+      "caught": 553,
       "should_keep": 0,
       "falsely_rejected": 0,
-      "recall": 1.0,
+      "recall": 0.992818671454219,
       "precision": 1.0,
       "false_reject_rate": 0.0,
-      "right_reason": 402
+      "right_reason": 552
     },
     {
       "family": "tone",
+      "unsegmented": 0,
       "should_reject": 1206,
       "caught": 1206,
       "should_keep": 0,
@@ -420,16 +426,17 @@
     },
     {
       "id": "quiet",
-      "label": "quiet (-55 dBFS)",
+      "label": "quiet (-46 dBFS)",
       "family": "level",
-      "clips": 9,
-      "kept": 0,
-      "no_clip": 393,
+      "clips": 557,
+      "kept": 4,
+      "no_clip": 16,
       "rejected": {
-        "too_quiet": 9
+        "low_snr": 1,
+        "too_quiet": 552
       },
       "expected": {
-        "reject": 402
+        "reject": 573
       }
     },
     {

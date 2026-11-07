@@ -4,26 +4,15 @@ use std::path::{Path, PathBuf};
 
 use aerosieve::decode::decode_file;
 use aerosieve::{
-    DecodeConfig, DecodedAudio, FileOutcome, FilterPolicy, Inspector, Pipeline, PipelineConfig,
-    PipelineError, PipelineStats, QualityMetrics, SegmentConfig,
+    ClipSummary, DecodeConfig, DecodedAudio, FileOutcome, FilterPolicy, Inspector, Pipeline,
+    PipelineConfig, PipelineError, PipelineStats, SegmentConfig,
 };
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pythonize::{depythonize, pythonize};
 use serde::Serialize;
 
-const ACCEPTED: &str = "accept";
-
-#[derive(Serialize)]
-struct Clip {
-    start_s: f32,
-    duration_s: f32,
-    #[serde(flatten)]
-    metrics: QualityMetrics,
-    verdict: &'static str,
-}
-
-/// Peak amplitude per bucket of `step_s` seconds, for drawing a waveform.
+/// Peak amplitude per span of `step_s` seconds, for drawing a waveform.
 #[derive(Serialize)]
 struct Envelope {
     step_s: f32,
@@ -32,18 +21,9 @@ struct Envelope {
 
 impl Envelope {
     fn of(audio: &DecodedAudio, points: usize) -> Self {
-        let bucket = audio.samples.len().div_ceil(points.max(1)).max(1);
-        let peaks = audio
-            .samples
-            .chunks(bucket)
-            .map(|chunk| {
-                chunk
-                    .iter()
-                    .fold(0.0f32, |peak, sample| peak.max(sample.abs()))
-            })
-            .collect();
+        let peaks = audio.peaks(points);
         Self {
-            step_s: bucket as f32 / audio.sample_rate as f32,
+            step_s: audio.duration_s() / peaks.len().max(1) as f32,
             peaks,
         }
     }
@@ -55,7 +35,7 @@ struct Inspection {
     duration_s: f32,
     source_sample_rate: u32,
     applied_gain_db: f32,
-    clips: Vec<Clip>,
+    clips: Vec<ClipSummary>,
     envelope: Option<Envelope>,
 }
 
@@ -64,12 +44,7 @@ impl From<FileOutcome> for Inspection {
         let clips = outcome
             .segments
             .iter()
-            .map(|clip| Clip {
-                start_s: clip.segment.start_sample as f32 / outcome.sample_rate as f32,
-                duration_s: clip.segment.duration_s(outcome.sample_rate),
-                metrics: clip.metrics,
-                verdict: clip.rejected.map_or(ACCEPTED, |reason| reason.as_str()),
-            })
+            .map(|clip| clip.summary(outcome.sample_rate))
             .collect();
         Self {
             path: outcome.path,

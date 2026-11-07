@@ -1,5 +1,6 @@
 import { element } from "./dom.js";
 import { defaults, extensionOf, inspect } from "./engine.js";
+import { fetchBytes } from "./http.js";
 import { ClipPlayer } from "./player.js";
 import { mountPolicyControls } from "./policy.js";
 import { describe, isKept } from "./verdicts.js";
@@ -104,26 +105,33 @@ export async function mountDemo(root) {
     renderOverlay(clips, durationS);
     renderRows(clips);
     renderStats(clips);
-    setStatus(clips.length ? "Click a clip to hear it." : "No speech long enough to make a clip (3 s minimum).");
+    setStatus(clips.length ? "Click a clip to hear it." : "No speech long enough to make a clip.");
   };
 
-  const run = async (bytes, name) => {
+  let latest = 0;
+
+  const run = async (name, readBytes) => {
+    const request = ++latest;
     setStatus(`Decoding ${name}…`);
     try {
-      const { inspection, elapsedMs } = await inspect(bytes, extensionOf(name));
+      const { inspection, elapsedMs } = await inspect(await readBytes(), extensionOf(name));
+      if (request !== latest) {
+        inspection.free();
+        return;
+      }
       current?.inspection.free();
       current = { inspection, name, elapsedMs, envelope: inspection.envelope(ENVELOPE_POINTS) };
       player.load(inspection.samples(), inspection.sample_rate);
       render();
     } catch (error) {
-      setStatus(`Could not read ${name}: ${error.message ?? error}`, true);
+      if (request === latest) setStatus(`Could not read ${name}: ${error.message ?? error}`, true);
     }
   };
 
-  const loadSample = async (button) => {
+  const loadSample = (button) => {
     ui.samples.forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
-    const response = await fetch(`samples/${button.dataset.sample}`);
-    await run(await response.arrayBuffer(), button.dataset.sample);
+    const name = button.dataset.sample;
+    return run(name, () => fetchBytes(`samples/${name}`));
   };
 
   const loadFile = async (file) => {
@@ -133,7 +141,7 @@ export async function mountDemo(root) {
       return;
     }
     ui.samples.forEach((button) => button.setAttribute("aria-pressed", "false"));
-    await run(await file.arrayBuffer(), file.name);
+    await run(file.name, () => file.arrayBuffer());
   };
 
   ui.samples.forEach((button) => button.addEventListener("click", () => loadSample(button)));

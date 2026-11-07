@@ -1,4 +1,5 @@
 import { element } from "./dom.js";
+import { fetchJson } from "./http.js";
 import { describe, isKept } from "./verdicts.js";
 import { drawWaveform } from "./waveform.js";
 
@@ -14,7 +15,7 @@ const pillFor = (clip, order) => {
 };
 
 export async function mountHero(root) {
-  const hero = await (await fetch("data/hero.json")).json();
+  const hero = await fetchJson("data/hero.json");
   const canvas = root.querySelector("[data-hero-waveform]");
   const draw = () => drawWaveform(canvas, { envelope: hero.envelope, durationS: hero.duration_s, clips: hero.clips });
   const pills = hero.clips.map(pillFor);

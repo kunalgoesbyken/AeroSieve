@@ -23,6 +23,9 @@ pub struct Report {
 
 #[derive(Serialize, Default)]
 pub struct Scores {
+    /// Recordings in which the segmenter found no clip. They never reach the
+    /// filters, so they are counted here and nowhere else.
+    pub unsegmented: usize,
     pub should_reject: usize,
     pub caught: usize,
     pub should_keep: usize,
@@ -71,10 +74,6 @@ pub struct RunInfo {
     pub policy: FilterPolicy,
 }
 
-fn dropped(verdict: Verdict) -> bool {
-    verdict != Verdict::Kept
-}
-
 fn ratio(numerator: usize, denominator: usize) -> f64 {
     if denominator == 0 {
         return 0.0;
@@ -83,10 +82,11 @@ fn ratio(numerator: usize, denominator: usize) -> f64 {
 }
 
 fn score<'a>(observations: impl Iterator<Item = &'a Observation> + Clone) -> Scores {
-    let count = |expect: Expect, drop: bool| {
+    let count = |expect: Expect, rejected: bool| {
         observations
             .clone()
-            .filter(|o| o.expect == expect && dropped(o.verdict) == drop)
+            .filter(|o| o.expect == expect && o.verdict != Verdict::NoClip)
+            .filter(|o| matches!(o.verdict, Verdict::Rejected(_)) == rejected)
             .count()
     };
     let caught = count(Expect::Reject, true);
@@ -94,6 +94,10 @@ fn score<'a>(observations: impl Iterator<Item = &'a Observation> + Clone) -> Sco
     let falsely_rejected = count(Expect::Keep, true);
     let kept_right = count(Expect::Keep, false);
     Scores {
+        unsegmented: observations
+            .clone()
+            .filter(|o| o.verdict == Verdict::NoClip)
+            .count(),
         should_reject: caught + missed,
         caught,
         should_keep: falsely_rejected + kept_right,
@@ -183,7 +187,6 @@ fn family_report(
         .filter(|o| o.expect == Expect::Reject)
         .filter(|o| match (o.verdict, family.reason()) {
             (Verdict::Rejected(reason), Some(expected)) => reason == expected,
-            (Verdict::NoClip, _) => true,
             _ => false,
         })
         .count();

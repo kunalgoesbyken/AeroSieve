@@ -115,6 +115,30 @@ impl SegmentOutcome {
     pub fn accepted(&self) -> bool {
         self.rejected.is_none()
     }
+
+    /// This clip in seconds, with its verdict as a string.
+    pub fn summary(&self, sample_rate: u32) -> ClipSummary {
+        ClipSummary {
+            start_s: self.segment.start_sample as f32 / sample_rate as f32,
+            duration_s: self.segment.duration_s(sample_rate),
+            metrics: self.metrics,
+            verdict: self.rejected.map_or(ACCEPTED, RejectReason::as_str),
+        }
+    }
+}
+
+/// [`ClipSummary::verdict`] of a clip that passed every check.
+pub const ACCEPTED: &str = "accept";
+
+/// One clip as reported to people and other languages.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct ClipSummary {
+    pub start_s: f32,
+    pub duration_s: f32,
+    #[serde(flatten)]
+    pub metrics: QualityMetrics,
+    /// [`ACCEPTED`], or the [`RejectReason`] identifier.
+    pub verdict: &'static str,
 }
 
 /// What happened to one input.
@@ -325,9 +349,8 @@ impl<D: SpeechDetector> Pipeline<D> {
         path: &Path,
         transcript: Option<&str>,
     ) -> Result<FileOutcome, PipelineError> {
-        let audio = aerosieve_decode::decode_file(path, &self.inspector.decode)
-            .inspect_err(|_| self.stats.files_failed += 1)?;
-        self.process_audio(path, &audio, transcript)
+        let inspected = self.inspector.inspect_file_keeping_audio(path);
+        self.finish_file(inspected, transcript)
     }
 
     /// Segment, score, and shard audio that is already decoded.
@@ -346,6 +369,16 @@ impl<D: SpeechDetector> Pipeline<D> {
             .inspect_audio(source, audio)
             .and_then(|outcome| self.write(outcome, audio, transcript));
         self.count(outcome)
+    }
+
+    fn finish_file(
+        &mut self,
+        inspected: Result<(FileOutcome, DecodedAudio), PipelineError>,
+        transcript: Option<&str>,
+    ) -> Result<FileOutcome, PipelineError> {
+        let written =
+            inspected.and_then(|(outcome, audio)| self.write(outcome, &audio, transcript));
+        self.count(written)
     }
 
     fn count(
@@ -431,16 +464,7 @@ impl<D: SpeechDetector + Clone + Send + Sync> Pipeline<D> {
                 )
                 .collect();
             for ((_, transcript), inspected) in inputs.iter().zip(inspected) {
-                results.push(match inspected {
-                    Ok((outcome, audio)) => {
-                        let written = self.write(outcome, &audio, transcript.as_deref());
-                        self.count(written)
-                    }
-                    Err(error) => {
-                        self.stats.files_failed += 1;
-                        Err(error)
-                    }
-                });
+                results.push(self.finish_file(inspected, transcript.as_deref()));
             }
         }
         results

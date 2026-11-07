@@ -12,18 +12,18 @@ It is written in Rust, runs on CPU with no ML model by default, and can be used 
 
 ## Results
 
-[SieveBench](crates/aerosieve-sievebench) damages clean speech in known ways (white, pink and babble noise at six levels, overdrive, a phone line, near-silence, tones and hum) and runs every damaged clip through the same code as the CLI. Across 1,834 recordings in six languages, that is 51,352 clips:
+[SieveBench](crates/aerosieve-sievebench) damages clean speech in known ways (white, pink and babble noise at six levels, overdrive, a phone line, near-silence, tones and hum) and runs every damaged copy through the same code as the CLI. Across 1,834 recordings in six languages, that is 51,352 damaged recordings:
 
 | Language | Source | Audio | Untouched audio kept | Over a phone line | Defects caught |
 | :--- | :--- | ---: | ---: | ---: | ---: |
-| English | LibriSpeech dev-clean sample | 8 min | 100% | 100% | 99% |
-| Hindi | FLEURS dev | 43 min | 84% | 89% | 100% |
-| Tamil | FLEURS dev | 75 min | 84% | 86% | 100% |
-| Bengali | FLEURS dev | 87 min | 86% | 87% | 100% |
-| Telugu | FLEURS dev | 54 min | 96% | 99% | 100% |
-| Marathi | FLEURS dev | 94 min | 99% | 100% | 100% |
+| English | LibriSpeech dev-clean sample | 8 min | 100% | 100% | 99.4% |
+| Hindi | FLEURS dev | 43 min | 84% | 89% | 100.0% |
+| Tamil | FLEURS dev | 75 min | 84% | 86% | 99.8% |
+| Bengali | FLEURS dev | 87 min | 86% | 87% | 99.9% |
+| Telugu | FLEURS dev | 54 min | 96% | 99% | 100.0% |
+| Marathi | FLEURS dev | 94 min | 99% | 100% | 100.0% |
 
-- 23,834 of 23,839 clips that should be rejected were rejected, and every one of those rejections named the injected defect.
+- 24,385 of 24,409 clips that should be rejected were rejected, and 24,383 of those rejections named the injected defect. 105 damaged recordings never became a clip at all; they are reported separately and counted neither way.
 - FLEURS is read speech recorded on volunteers' own devices, so some "untouched" clips really are noisy. Most of what Hindi, Tamil and Bengali lose is source audio already under the 10 dB floor; LibriSpeech, recorded for audiobooks, keeps every clean clip.
 - On white and pink noise, the WADA-SNR estimate lands within about 1.3 dB of the injected level from 0 to 20 dB. Babble (other people talking) reads up to 2.7 dB cleaner than it is, because it looks like speech.
 

@@ -3,7 +3,7 @@
   "source": "FLEURS dev split",
   "utterances": 443,
   "hours": 1.5617333333333332,
-  "elapsed_s": 65.602895,
+  "elapsed_s": 51.8098917,
   "policy": {
     "min_snr_db": 10.0,
     "max_clip_ratio": 0.01,
@@ -12,17 +12,19 @@
     "min_spectral_flatness": 0.005
   },
   "overall": {
-    "should_reject": 5767,
-    "caught": 5767,
+    "unsegmented": 5,
+    "should_reject": 5942,
+    "caught": 5940,
     "should_keep": 4023,
     "falsely_rejected": 59,
-    "recall": 1.0,
-    "precision": 0.9898729831788534,
+    "recall": 0.9996634129922585,
+    "precision": 0.9901650275045841,
     "false_reject_rate": 0.01466567238379319
   },
   "families": [
     {
       "family": "control",
+      "unsegmented": 0,
       "should_reject": 0,
       "caught": 0,
       "should_keep": 910,
@@ -34,6 +36,7 @@
     },
     {
       "family": "noise",
+      "unsegmented": 0,
       "should_reject": 2664,
       "caught": 2664,
       "should_keep": 2667,
@@ -45,6 +48,7 @@
     },
     {
       "family": "clipping",
+      "unsegmented": 0,
       "should_reject": 1328,
       "caught": 1328,
       "should_keep": 446,
@@ -56,17 +60,19 @@
     },
     {
       "family": "level",
-      "should_reject": 443,
-      "caught": 443,
+      "unsegmented": 5,
+      "should_reject": 618,
+      "caught": 616,
       "should_keep": 0,
       "falsely_rejected": 0,
-      "recall": 1.0,
+      "recall": 0.9967637540453075,
       "precision": 1.0,
       "false_reject_rate": 0.0,
-      "right_reason": 443
+      "right_reason": 616
     },
     {
       "family": "tone",
+      "unsegmented": 0,
       "should_reject": 1332,
       "caught": 1332,
       "should_keep": 0,
@@ -419,16 +425,16 @@
     },
     {
       "id": "quiet",
-      "label": "quiet (-55 dBFS)",
+      "label": "quiet (-46 dBFS)",
       "family": "level",
-      "clips": 2,
-      "kept": 0,
-      "no_clip": 441,
+      "clips": 618,
+      "kept": 2,
+      "no_clip": 5,
       "rejected": {
-        "too_quiet": 2
+        "too_quiet": 616
       },
       "expected": {
-        "reject": 443
+        "reject": 623
       }
     },
     {

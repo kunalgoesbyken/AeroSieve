@@ -285,6 +285,8 @@ p { margin: 0; }
 }
 .demo-status { margin-top: 12px; min-height: 1.5em; font-size: 14px; color: var(--muted); }
 .demo-status.is-error { color: var(--tone-danger); }
+[data-hero][data-failed] .sieve-card { display: none; }
+[data-demo][data-failed] [data-status]::after { content: "The in-browser demo could not start. Try a recent Chrome, Firefox or Safari."; color: var(--tone-danger); }
 
 .demo-stats {
   display: grid;
@@ -503,6 +505,9 @@ p { margin: 0; }
   .result { padding: 20px; }
   .bars-table td { padding-right: 8px; }
   .bars-table .bar { width: calc(var(--v) * 40px); margin-right: 6px; }
+  .snr-chart svg { font-size: 17px; }
+  .snr-chart .axis-title, .snr-chart .identity-label { font-size: 17px; }
+  .snr-chart .series-label { font-size: 18px; }
   .hero-actions .button, .hero-actions .command { width: 100%; justify-content: center; }
 }
 
