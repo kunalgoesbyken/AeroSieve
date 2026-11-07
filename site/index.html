@@ -246,13 +246,14 @@
 
         <article class="result result-speed" data-reveal>
           <h3>Speed</h3>
-          <p class="big-number">660×</p>
-          <p>faster than real time: 43 minutes of Hindi as 48 kHz FLAC, decoded, resampled, segmented, scored and sharded in 3.9 s.</p>
+          <p class="big-number">940×</p>
+          <p>faster than real time: 43 minutes of Hindi as 48 kHz FLAC, decoded, resampled, segmented, scored and sharded in 2.75 s.</p>
           <p class="fine">8 threads on one laptop. Files are inspected in parallel and written in order, so shards match a single-threaded run byte for byte.</p>
           <dl class="mini-stats">
-            <div><dt>48 kHz FLAC, 8 threads</dt><dd>3.9 s</dd></div>
-            <div><dt>48 kHz FLAC, 1 thread</dt><dd>9.0 s</dd></div>
-            <div><dt>16 kHz WAV, 8 threads</dt><dd>1.7 s</dd></div>
+            <div><dt>48 kHz FLAC, 8 threads</dt><dd>2.75 s</dd></div>
+            <div><dt>48 kHz FLAC, 1 thread</dt><dd>8.1 s</dd></div>
+            <div><dt>16 kHz WAV, 8 threads</dt><dd>0.55 s</dd></div>
+            <div><dt>Verdict latency, 1,000 live streams (p95)</dt><dd>14.8 ms</dd></div>
           </dl>
         </article>
         <p class="fine reproduce">Every number in this section is reproduced by <code>crates/aerosieve-sievebench/scripts/run_all.sh</code>.</p>
@@ -277,13 +278,14 @@
     <section class="section section-tight" id="install">
       <div class="shell">
         <div class="section-head">
-          <h2>Use it from the command line, Python, or Rust.</h2>
+          <h2>Use it from the command line, Python, Rust, or a live stream.</h2>
         </div>
         <div class="code-card" data-tabs>
           <div class="tabs" role="tablist" aria-label="Interfaces">
             <button type="button" role="tab" aria-selected="true" aria-controls="tab-cli">CLI</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="tab-python">Python</button>
             <button type="button" role="tab" aria-selected="false" aria-controls="tab-rust">Rust</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="tab-stream">Live stream</button>
           </div>
           <pre id="tab-cli" role="tabpanel"><code><span class="c">$</span> cargo install aerosieve-cli
 <span class="c">$</span> aerosieve inspect recordings/
@@ -307,6 +309,15 @@ pipeline.process_file("recording.wav".as_ref(), Some("transcript"))?;
 
 let stats = pipeline.finish()?;
 println!("kept {:.1}%", stats.retention_rate() * 100.0);</code></pre>
+          <pre id="tab-stream" role="tabpanel" hidden><code><span class="c">$</span> cargo run --release -p aerosieve-serve
+<span class="c"># WebSocket /v1/stream: send 16 kHz PCM, get a verdict per utterance</span>
+<span class="c">&larr;</span> {"type":"ready","sample_rate":16000,"encoding":"pcm_s16le"}
+<span class="c">&rarr;</span> &lt;20 ms PCM frame&gt; &lt;20 ms PCM frame&gt; ...
+<span class="c">&larr;</span> {"type":"clip","start_s":0.51,"duration_s":4.92,"verdict":"<span class="ok">accept</span>","decided_at_s":5.92}
+<span class="c">&larr;</span> {"type":"clip","start_s":7.30,"duration_s":9.12,"verdict":"low_snr","decided_at_s":16.90}
+<span class="c">&larr;</span> {"type":"clip","start_s":17.83,"duration_s":9.31,"verdict":"clipping","decided_at_s":27.62}
+<span class="c">&rarr;</span> {"type":"end"}
+<span class="c">&larr;</span> {"type":"summary","heard_s":70.6,"clips":6,"accepted":3}</code></pre>
         </div>
       </div>
     </section>

@@ -2,7 +2,6 @@ use aerosieve_fixtures::{
     SAMPLE_RATE, at_dbfs, harmonic_speech, mix_at_snr, overdrive, samples, tone, white_noise,
 };
 
-use crate::spectrum::fft_in_place;
 use crate::wada::snr_from_g;
 use crate::wada_table::{G_VALS, SNR_MAX_DB, SNR_MIN_DB};
 use crate::*;
@@ -262,15 +261,58 @@ fn partial_policy_falls_back_to_defaults() {
     );
 }
 
-#[test]
-fn fft_puts_a_bin_aligned_sine_in_its_bin() {
-    const BIN: usize = 64;
-    let mut re = tone(FLATNESS_FFT_SIZE as u32, BIN as f32, 1.0, FLATNESS_FFT_SIZE);
-    let mut im = vec![0.0f32; FLATNESS_FFT_SIZE];
-    fft_in_place(&mut re, &mut im);
+/// The textbook form: one logarithm per sample.
+fn reference_wada_snr_db(samples: &[f32]) -> f32 {
+    let magnitudes: Vec<f64> = samples
+        .iter()
+        .map(|s| f64::from(s.abs()))
+        .filter(|&magnitude| magnitude > 0.0)
+        .collect();
+    if magnitudes.len() < crate::wada::WADA_MIN_SAMPLES {
+        return f32::NEG_INFINITY;
+    }
+    let n = magnitudes.len() as f64;
+    let mean_ln = magnitudes.iter().map(|m| m.ln()).sum::<f64>() / n;
+    let g = (magnitudes.iter().sum::<f64>() / n).ln() - mean_ln;
+    if !g.is_finite() {
+        return f32::NEG_INFINITY;
+    }
+    snr_from_g(g as f32)
+}
 
-    let peak = (0..FLATNESS_FFT_SIZE / 2)
-        .max_by(|&a, &b| re[a].hypot(im[a]).total_cmp(&re[b].hypot(im[b])))
-        .unwrap();
-    assert_eq!(peak, BIN);
+#[test]
+fn wada_snr_matches_the_per_sample_logarithm_form() {
+    let clean = harmonic_speech(samples(3.0), 11);
+    let mut signals = vec![
+        clean.clone(),
+        mix_at_snr(&clean, 5.0, 3),
+        white_noise(ONE_SECOND, 0.2, 5),
+        overdrive(&clean, 16.0),
+        at_dbfs(clean.clone(), -90.0),
+        sine(ONE_SECOND, 440.0, 1.0),
+    ];
+    signals.push(clean.iter().map(|s| s * 1e-39).collect());
+    signals.push(
+        clean
+            .iter()
+            .enumerate()
+            .map(|(i, s)| if i % 3 == 0 { s * 1e-40 } else { *s })
+            .collect(),
+    );
+
+    for (index, signal) in signals.iter().enumerate() {
+        let fast = wada_snr_db(signal);
+        let reference = reference_wada_snr_db(signal);
+        assert!(
+            (fast - reference).abs() < 1e-4 || fast == reference,
+            "signal {index}: {fast} vs {reference}"
+        );
+    }
+}
+
+#[test]
+fn wada_snr_of_audio_holding_infinity_is_negative_infinity() {
+    let mut speech = harmonic_speech(ONE_SECOND, 2);
+    speech[100] = f32::INFINITY;
+    assert_eq!(wada_snr_db(&speech), f32::NEG_INFINITY);
 }

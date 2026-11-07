@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `aerosieve-serve`: a streaming quality gate. Audio goes in over a WebSocket and each utterance's verdict comes back as soon as its closing pause is heard, with session, utterance-length, frame-size and idle limits, Prometheus metrics, a load generator, and a Python client.
+- `StreamSegmenter` and `LiveInspector` segment and score audio that arrives in pieces. Fed any chunking, they return exactly what batch segmentation and inspection return for the whole buffer, and hold only the audio of the utterance in progress.
+
+### Changed
+
+- Scoring is 4.7 times faster with identical results: spectral flatness uses a planned real FFT (`realfft`, already in the tree through the resampler) instead of a hand-written one, and WADA-SNR takes one logarithm per 512 samples rather than per sample. Every SieveBench score is unchanged; 48 kHz FLAC curation went from 660 to 940 times real time.
+- `Segmenter::segment` runs the streaming segmenter over the whole buffer, so batch and live results cannot drift apart.
+
 ## 0.4.0
 
 ### Fixed

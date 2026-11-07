@@ -3,7 +3,7 @@
   "source": "LibriSpeech dev-clean sample",
   "utterances": 63,
   "hours": 0.12766527777777778,
-  "elapsed_s": 4.3570525,
+  "elapsed_s": 2.6143347,
   "policy": {
     "min_snr_db": 10.0,
     "max_clip_ratio": 0.01,

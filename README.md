@@ -8,7 +8,7 @@
 
 AeroSieve turns raw audio recordings into training data for speech models. It decodes each file, cuts it into speech clips, drops the clips that are silent, noisy, clipped, or not speech, and writes the rest as [WebDataset](https://github.com/webdataset/webdataset) shards. Every clip it drops comes with a reason.
 
-It is written in Rust, runs on CPU with no ML model by default, and can be used as a command-line tool, a Rust library, from Python, or in a browser.
+It is written in Rust, runs on CPU with no ML model by default, and can be used as a command-line tool, a Rust library, from Python, in a browser, or as a [streaming WebSocket service](#streaming) that judges live audio one utterance at a time.
 
 ## Results
 
@@ -36,7 +36,7 @@ It is written in Rust, runs on CPU with no ML model by default, and can be used 
 
 ## Speed
 
-43 minutes of Hindi as 48 kHz FLAC is decoded, resampled, segmented, scored and sharded in 3.9 s on 8 threads, about 660 times faster than real time (9.0 s on one thread). As 16 kHz WAV it takes 1.7 s. Files are inspected in parallel and written in input order, so the shards are identical to a single-threaded run.
+43 minutes of Hindi as 48 kHz FLAC is decoded, resampled, segmented, scored and sharded in 2.75 s on 8 threads, about 940 times faster than real time (8.1 s on one thread, most of it decoding and resampling). As 16 kHz WAV it takes 0.55 s. Files are inspected in parallel and written in input order, so the shards are identical to a single-threaded run.
 
 Run `cargo bench --bench pipeline_benchmark` to measure on your machine.
 
@@ -138,6 +138,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 `Pipeline::process_files` curates many files on every core with the same result as calling `process_file` on each in order.
+
+## Streaming
+
+[`aerosieve-serve`](crates/aerosieve-serve) judges live audio, such as a call or a voice agent's microphone, over a WebSocket. Each utterance's verdict comes back as soon as the pause that ends it is heard, and it is the verdict batch curation would reach on the same audio: the batch segmenter is the streaming one fed the whole file, and tests stream audio in random chunk sizes and check that the clips and scores are identical.
+
+```sh
+cargo run --release -p aerosieve-serve
+python crates/aerosieve-serve/clients/stream_wav.py recording.wav
+```
+
+On a 4-core laptop it holds 1,000 concurrent live streams with verdicts arriving 14.8 ms (p95) after the frame that completed the clip, with the load generator on the same machine. Memory per stream is bounded by the utterance in progress. Protocol, limits, metrics and the full latency table are in [`crates/aerosieve-serve`](crates/aerosieve-serve).
 
 ## Browser
 

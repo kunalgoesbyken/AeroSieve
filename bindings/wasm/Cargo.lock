@@ -20,6 +20,7 @@ dependencies = [
 name = "aerosieve-acoustic"
 version = "0.4.0"
 dependencies = [
+ "realfft",
  "serde",
 ]
 

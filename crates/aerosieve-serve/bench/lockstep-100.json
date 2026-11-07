@@ -1,0 +1,30 @@
+{
+  "streams": 100,
+  "ramp_s": 0.0,
+  "pace": "realtime",
+  "frame_ms": 20,
+  "audio_s_per_stream": 71.61,
+  "wall_s": 71.6382238,
+  "realtime_factor": 99.96060231744606,
+  "clips": 600,
+  "verdicts": {
+    "accept": 300,
+    "clipping": 100,
+    "low_snr": 100,
+    "tonal": 100
+  },
+  "latency_ms": {
+    "p50": 12.4533,
+    "p95": 34.4392,
+    "p99": 43.809,
+    "max": 46.930899999999994
+  },
+  "hold_ms": {
+    "p50": 486.0000000000007,
+    "p95": 497.99999999999756,
+    "p99": 497.99999999999756,
+    "max": 497.99999999999756
+  },
+  "failed_streams": 0,
+  "first_error": null
+}

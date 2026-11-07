@@ -3,7 +3,7 @@
   "source": "FLEURS dev split",
   "utterances": 376,
   "hours": 1.254361111111111,
-  "elapsed_s": 37.4274373,
+  "elapsed_s": 24.913685,
   "policy": {
     "min_snr_db": 10.0,
     "max_clip_ratio": 0.01,

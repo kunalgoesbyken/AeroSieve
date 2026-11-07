@@ -10,6 +10,7 @@ keywords = ["audio", "speech", "vad", "dataset", "webdataset"]
 categories = ["multimedia::audio"]
 
 [dependencies]
+realfft.workspace = true
 serde.workspace = true
 
 [dev-dependencies]
