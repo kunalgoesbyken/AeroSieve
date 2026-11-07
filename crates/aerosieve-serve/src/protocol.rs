@@ -49,12 +49,13 @@ pub enum ProtocolError {
 
 /// Little-endian signed 16-bit PCM to samples in `-1.0..1.0`.
 pub fn decode_pcm(bytes: &[u8]) -> Result<Vec<f32>, ProtocolError> {
-    if !bytes.len().is_multiple_of(BYTES_PER_SAMPLE) {
+    let (samples, partial) = bytes.as_chunks::<BYTES_PER_SAMPLE>();
+    if !partial.is_empty() {
         return Err(ProtocolError::PartialSample(bytes.len()));
     }
-    Ok(bytes
-        .chunks_exact(BYTES_PER_SAMPLE)
-        .map(|pair| f32::from(i16::from_le_bytes([pair[0], pair[1]])) / -f32::from(i16::MIN))
+    Ok(samples
+        .iter()
+        .map(|&pair| f32::from(i16::from_le_bytes(pair)) / -f32::from(i16::MIN))
         .collect())
 }
 
