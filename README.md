@@ -4,6 +4,8 @@
 [![crates.io](https://img.shields.io/crates/v/aerosieve.svg)](https://crates.io/crates/aerosieve)
 [![docs.rs](https://img.shields.io/docsrs/aerosieve)](https://docs.rs/aerosieve)
 
+![AeroSieve: keep the speech, drop the rest. The in-browser demo judging a recording clip by clip, with a reason for every dropped clip](.github/readme-card.webp)
+
 **[Try it in your browser →](https://aerosieve.vercel.app)** The demo runs this Rust code compiled to WebAssembly, so your audio never leaves the page.
 
 AeroSieve turns raw audio recordings into training data for speech models. It decodes each file, cuts it into speech clips, drops the clips that are silent, noisy, clipped, or not speech, and writes the rest as [WebDataset](https://github.com/webdataset/webdataset) shards. Every clip it drops comes with a reason.
