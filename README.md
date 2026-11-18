@@ -14,7 +14,21 @@ It is written in Rust, runs on CPU with no ML model by default, and can be used 
 
 ## Results
 
-[SieveBench](crates/aerosieve-sievebench) damages clean speech in known ways (white, pink and babble noise at six levels, overdrive, a phone line, near-silence, tones and hum) and runs every damaged copy through the same code as the CLI. Across 1,834 recordings in six languages, that is 51,352 damaged recordings:
+### On real phone speech
+
+[`experiments/asr-hi`](experiments/asr-hi) scored 2,917 Gram Vaani Hindi utterances (7.8 h of spontaneous speech recorded over phones, transcripts verified twice by humans) and transcribed them with two pretrained recognizers:
+
+| | Whisper-large-v3 | MMS-1B |
+| :--- | ---: | ---: |
+| WER on accepted utterances | 55.7% | 52.0% |
+| WER on rejected utterances | 64.6% | 60.6% |
+| Gap, 95% CI | +8.9 (+2.2 to +16.9) | +8.6 (+5.5 to +11.6) |
+
+Rejected audio is harder for both models, and the gap holds within 8 kHz audio alone. It comes from the tonality check; the SNR check did not predict errors here.
+
+### SieveBench
+
+[SieveBench](crates/aerosieve-sievebench) damages clean speech in known ways (white, pink and babble noise at six levels, overdrive, a phone line, near-silence, tones and hum) and runs 51,352 damaged copies of 1,834 recordings through the same code as the CLI:
 
 | Language | Source | Audio | Untouched audio kept | Over a phone line | Defects caught |
 | :--- | :--- | ---: | ---: | ---: | ---: |
@@ -25,30 +39,17 @@ It is written in Rust, runs on CPU with no ML model by default, and can be used 
 | Telugu | FLEURS dev | 54 min | 96% | 99% | 100.0% |
 | Marathi | FLEURS dev | 94 min | 99% | 100% | 100.0% |
 
-- 24,385 of 24,409 clips that should be rejected were rejected, and 24,383 of those rejections named the injected defect. 105 damaged recordings never became a clip at all; they are reported separately and counted neither way.
-- FLEURS is read speech recorded on volunteers' own devices, so some "untouched" clips really are noisy. Most of what Hindi, Tamil and Bengali lose is source audio already under the 10 dB floor; LibriSpeech, recorded for audiobooks, keeps every clean clip.
-- On white and pink noise, the WADA-SNR estimate lands within about 1.3 dB of the injected level from 0 to 20 dB. Babble (other people talking) reads up to 2.7 dB cleaner than it is, because it looks like speech.
+- 24,385 of 24,409 clips that should be rejected were, and all but 2 named the injected defect. 105 damaged recordings never became a clip and are counted neither way.
+- FLEURS volunteers recorded on their own devices, so some untouched clips really are noisy; most of what Hindi, Tamil and Bengali lose is already under the 10 dB floor.
+- WADA-SNR lands within about 1.3 dB of the injected level for white and pink noise from 0 to 20 dB. Babble reads up to 2.7 dB cleaner than it is.
 
-`crates/aerosieve-sievebench/scripts/run_all.sh` downloads the corpora and reproduces every number above. The reports are in [`site/data`](site/data).
+`crates/aerosieve-sievebench/scripts/run_all.sh` reproduces every number above; the reports are in [`site/data`](site/data).
 
-### What the benchmark found in AeroSieve
+### Bugs the testing found
 
-- **Clipping hid behind loudness leveling.** A loud, clipped file was turned down 3 dB before scoring, so its flattened peaks sat near 0.7 and passed as clean. Clipping is now measured against the source's own full scale.
-- **Speech was cut at every word gap.** A 100 ms pause ended a clip, so natural speech broke into fragments under the 3 s minimum and was dropped: 23 of 73 clean English recordings produced no clip at all. Pauses under 500 ms are now bridged. On the same 43 minutes of Hindi, kept speech went from 16.4 to 25.6 minutes (+56%).
-
-### On real phone speech
-
-[`experiments/asr-hi`](experiments/asr-hi) scores 2,917 Gram Vaani Hindi utterances (7.8 h of spontaneous phone-collected speech, transcripts verified twice by humans) and transcribes them with two pretrained recognizers, no fine-tuning:
-
-| | Whisper-large-v3 | MMS-1B |
-| :--- | ---: | ---: |
-| WER on accepted utterances | 55.7% | 52.0% |
-| WER on rejected utterances | 64.6% | 60.6% |
-| Gap, 95% CI | +8.9 (+2.2 to +16.9) | +8.6 (+5.5 to +11.6) |
-
-- Rejected audio is harder for both models, and the gap holds within 8 kHz audio alone.
-- The signal comes from spectral flatness. The SNR check did not help here: its rejections were wideband clips with music beds, easier than average, and WADA-SNR barely tracked errors within a channel.
-- **It found a bug.** Low-bitrate codecs cut narrowband speech off near 3 kHz, and the empty top of the flatness band made 38% of 8 kHz utterances read as tones. Flatness now leaves out band edges the channel does not carry; retention went from 75% to 93%, with every SieveBench score unchanged.
+- **Phone audio read as a tone** (real speech). Low-bitrate codecs cut speech off near 3 kHz, and the empty top of the flatness band rejected 38% of 8 kHz utterances as `tonal`. Flatness now leaves out band edges the recording does not carry: retention went from 75% to 93%, with every SieveBench score unchanged.
+- **Clipping hid behind loudness leveling** (SieveBench). A clipped file turned down 3 dB passed as clean. Clipping is now measured against the source's own full scale.
+- **Speech was cut at every word gap** (SieveBench). A 100 ms pause ended a clip, so natural speech broke into fragments under 3 s and was dropped. Pauses under 500 ms are now bridged; kept Hindi speech went from 16.4 to 25.6 minutes.
 
 ## Speed
 
@@ -186,7 +187,7 @@ Synthetic signals, from `cargo run --release --example report`:
 | white noise | −14.9 dB | −20.0 dBFS | 0.562 | `low_snr` |
 
 - **SNR** is estimated with [WADA-SNR](https://www.isca-archive.org/interspeech_2008/kim08e_interspeech.html), which needs only the clip itself and no clean reference.
-- **Flatness** separates tones and hum (near 0) from speech and noise. It is measured between 300 and 3400 Hz so that resampled audio is not mistaken for a tone, leaving out band edges more than 30 dB below the band's median so that a codec's cutoff is not either.
+- **Flatness** separates tones and hum (near 0) from speech and noise. It is measured over the part of 300 to 3400 Hz the recording carries, so resampled or codec-limited audio is not mistaken for a tone.
 
 Every threshold is a field of `FilterPolicy`.
 
@@ -196,11 +197,10 @@ By default speech is detected from signal level, so loud music counts as speech 
 
 ## Limitations
 
-- SieveBench's defects are injected, so it shows that the filters catch damage of known kinds and levels. The Gram Vaani check shows rejected real audio is harder to recognize, not that training without it gives a better model; that needs a training run ([`experiments/asr-hi/PLAN.md`](experiments/asr-hi/PLAN.md)).
-- On real phone speech the SNR floor rejected music-bed recordings that recognizers handled well. Check what it removes from your data before relying on it.
-- A single sustained instrument can pass as speech, and babble noise reads cleaner than it is.
-- When curating, one transcript is given per file and copied to every clip from that file. Transcripts are not aligned to clips, and there is no speech recognition. For audio already cut per utterance, score it whole with `inspect(..., whole=True)` instead.
-- Run `aerosieve inspect` on your own data before a large job; where to put the SNR floor is a real choice.
+- Rejected real audio is harder to recognize, but no model has yet been trained on the kept audio to show it does better. That run is planned in [`experiments/asr-hi/PLAN.md`](experiments/asr-hi/PLAN.md).
+- On real phone speech the SNR floor rejected music-bed recordings that recognizers handled well. Check what it removes before relying on it.
+- A single sustained instrument can pass as speech, and babble reads cleaner than it is.
+- `curate` copies one transcript per file to every clip from that file; there is no alignment or speech recognition. For audio already cut per utterance, use `inspect(..., whole=True)`.
 
 ## License
 

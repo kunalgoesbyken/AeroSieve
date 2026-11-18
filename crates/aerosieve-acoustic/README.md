@@ -25,7 +25,7 @@ match FilterPolicy::default().evaluate(&metrics) {
 
 WADA models clean speech as Gamma(0.4) and noise as Gaussian. A signal that is not speech-like, such as a pure tone, reads as low SNR however clean it is. `src/wada_table.rs` documents how the lookup table was generated.
 
-Flatness is restricted to the speech band because resampled audio has empty bins near Nyquist, which would otherwise make speech read as a tone.
+Flatness is restricted to the speech band because resampled audio has empty bins near Nyquist, which would otherwise make speech read as a tone. For the same reason, band edges more than `CARRIED_BAND_FLOOR_DB` (30 dB) below the band's median are left out, so a codec that cuts speech off near 3 kHz does not either.
 
 ## Policy
 
@@ -40,4 +40,4 @@ Flatness is restricted to the speech band because resampled audio has empty bins
 | `min_spectral_flatness` | 0.005 | `tonal` |
 | `min_snr_db` | 10 | `low_snr` |
 
-On a small set of real recordings, clean speech read 13 dB or more on WADA-SNR and 0.02 to 0.18 on flatness, while 13 of 14 music clips read 8 dB or less on WADA-SNR, with flatness overlapping speech. So the SNR floor is what rejects most music, and the flatness floor catches tones and hum. The root README has the numbers.
+On a small set of real recordings, clean speech read 13 dB or more on WADA-SNR and 0.02 to 0.18 on flatness, while 13 of 14 music clips read 8 dB or less on WADA-SNR, with flatness overlapping speech. So the SNR floor is what rejects most music, and the flatness floor catches tones and hum.
