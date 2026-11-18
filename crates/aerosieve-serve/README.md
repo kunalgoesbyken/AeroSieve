@@ -21,7 +21,7 @@ python crates/aerosieve-serve/clients/stream_wav.py recording.wav
 kept 3 of 6 clips from 70.6s
 ```
 
-That is `site/samples/mixed.ogg`, converted to 16 kHz WAV: clean speech, then the same speaker under noise, clipped, and over a dial tone.
+That is `site/public/samples/mixed.ogg`, converted to 16 kHz WAV: clean speech, then the same speaker under noise, clipped, and over a dial tone.
 
 ## Protocol
 
@@ -52,7 +52,7 @@ Frames over 1 MiB are refused. Audio is judged as received, with no loudness lev
 
 ## Latency
 
-Measured on one laptop (Core i5-9300H, 4 cores, 8 threads) with the load generator on the same machine, each client replaying `site/samples/mixed.ogg` (72 s, six utterances: three kept, one each clipped, noisy and over a dial tone) in 20 ms frames at real-time pace. Latency runs from sending the frame that completed a clip to receiving its verdict.
+Measured on one laptop (Core i5-9300H, 4 cores, 8 threads) with the load generator on the same machine, each client replaying `site/public/samples/mixed.ogg` (72 s, six utterances: three kept, one each clipped, noisy and over a dial tone) in 20 ms frames at real-time pace. Latency runs from sending the frame that completed a clip to receiving its verdict.
 
 | Live streams | Started | Verdicts | p50 | p95 | p99 | Failed |
 | ---: | :--- | ---: | ---: | ---: | ---: | ---: |
@@ -71,5 +71,5 @@ Reproduce with:
 ```sh
 cargo build --release -p aerosieve-serve --bins
 ./target/release/aerosieve-serve --max-sessions 2048 &
-./target/release/aerosieve-loadgen site/samples/mixed.ogg --streams 1000 --ramp-s 10
+./target/release/aerosieve-loadgen site/public/samples/mixed.ogg --streams 1000 --ramp-s 10
 ```

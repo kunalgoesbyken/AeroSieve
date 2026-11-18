@@ -1,0 +1,91 @@
+---
+import { LINKS } from "../../data/site.js";
+import Section from "../Section.astro";
+import Cells from "./Cells.astro";
+import Head from "./Head.astro";
+
+const RUNS = [
+  {
+    title: "SieveBench",
+    note: "Downloads public speech corpora (CC BY 4.0), runs the benchmark and rewrites every report in site/data.",
+    lines: ["crates/aerosieve-sievebench/scripts/run_all.sh"],
+  },
+  {
+    title: "Real phone speech",
+    note: "Needs the Gram Vaani corpus from OpenSLR 118, ffmpeg and a Kaggle account. The transcription step runs on Kaggle GPUs.",
+    lines: [
+      "cd experiments/asr-hi",
+      "uv venv .venv --python 3.12",
+      "uv pip install --python .venv ../../bindings/python soundfile numpy jiwer indic-nlp-library",
+      ".venv/Scripts/python prepare.py --gv-root <gram-vaani-dir> --splits GV_Dev_5h GV_Eval_3h --out <prepared-dir>",
+      ".venv/Scripts/python sieve.py --data <prepared-dir>",
+      "kaggle kernels push -p kaggle",
+      ".venv/Scripts/python report.py --data <prepared-dir> --language hi --hyps hyps_whisper.jsonl hyps_mms.jsonl --out results",
+    ],
+  },
+  {
+    title: "Batch speed",
+    note: "Measures the pipeline on your machine.",
+    lines: ["cargo bench --bench pipeline_benchmark"],
+  },
+  {
+    title: "Live-stream latency",
+    note: "Starts the server and replays 1,000 streams of the sample recording, started over 10 s.",
+    lines: [
+      "cargo build --release -p aerosieve-serve --bins",
+      "./target/release/aerosieve-serve --max-sessions 2048 &",
+      "./target/release/aerosieve-loadgen site/samples/mixed.ogg --streams 1000 --ramp-s 10",
+    ],
+  },
+];
+---
+
+<Section id="reproduce" cross>
+  <Head label="Reproduce" title="Run it yourself">
+    Every figure above comes from a script in the repository.
+  </Head>
+  <Cells cols={2}>
+    {RUNS.map(({ title, note, lines }) => (
+      <div class="run">
+        <h3>{title}</h3>
+        <p class="fine">{note}</p>
+        <pre><code>{lines.join("\n")}</code></pre>
+      </div>
+    ))}
+  </Cells>
+</Section>
+
+<Section tone="dither">
+  <div class="cta">
+    <h2 class="title">The code, the data and the scripts are open.</h2>
+    <div class="actions">
+      <a class="button" href="/docs">Read the docs</a>
+      <a class="button is-outline" href={LINKS.github}>View on GitHub</a>
+    </div>
+  </div>
+</Section>
+
+<style>
+  .run { display: grid; align-content: start; gap: 12px; }
+  .run h3 { font-size: 20px; line-height: 1.3; }
+  pre {
+    margin: 4px 0 0;
+    padding: 16px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--line);
+    background: var(--sunken);
+    font: 400 13px/22px var(--mono);
+    color: var(--ink);
+  }
+  pre code { font: inherit; }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px 48px;
+    padding: clamp(40px, 7vw, 72px) clamp(24px, 4vw, 48px);
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+</style>

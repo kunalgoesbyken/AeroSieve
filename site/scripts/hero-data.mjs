@@ -5,10 +5,10 @@ const site = fileURLToPath(new URL("..", import.meta.url));
 const sample = "mixed.ogg";
 const envelopePoints = 140;
 
-const engine = await import(new URL("../pkg/aerosieve_wasm.js", import.meta.url));
-await engine.default({ module_or_path: readFileSync(`${site}/pkg/aerosieve_wasm_bg.wasm`) });
+const engine = await import(new URL("../public/pkg/aerosieve_wasm.js", import.meta.url));
+await engine.default({ module_or_path: readFileSync(`${site}/public/pkg/aerosieve_wasm_bg.wasm`) });
 
-const inspection = new engine.Inspection(readFileSync(`${site}/samples/${sample}`), "ogg");
+const inspection = new engine.Inspection(readFileSync(`${site}/public/samples/${sample}`), "ogg");
 const round = (value, digits) => Number(value.toFixed(digits));
 
 const hero = {
@@ -19,5 +19,5 @@ const hero = {
   clips: inspection.clips(),
 };
 
-writeFileSync(`${site}/data/hero.json`, JSON.stringify(hero));
-console.log(`wrote data/hero.json: ${hero.clips.length} clips`);
+writeFileSync(`${site}/public/data/hero.json`, JSON.stringify(hero));
+console.log(`wrote public/data/hero.json: ${hero.clips.length} clips`);

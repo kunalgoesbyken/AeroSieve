@@ -13,4 +13,4 @@ inspection.envelope(200);               // peaks for drawing a waveform
 inspection.samples();                   // 16 kHz mono, for playback
 ```
 
-Recordings over 15 minutes are refused while decoding. Build with `build.sh`, which writes `site/pkg`.
+Recordings over 15 minutes are refused while decoding. Build with `build.sh`, which writes `site/public/pkg`.

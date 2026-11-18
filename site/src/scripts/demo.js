@@ -134,7 +134,7 @@ export async function mountDemo(root) {
   const loadSample = (button) => {
     ui.samples.forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
     const name = button.dataset.sample;
-    return run(name, () => fetchBytes(`samples/${name}`));
+    return run(name, () => fetchBytes(`/samples/${name}`));
   };
 
   const loadFile = async (file) => {

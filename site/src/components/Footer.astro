@@ -1,0 +1,81 @@
+---
+import { LINKS } from "../data/site.js";
+import GithubMark from "./GithubMark.astro";
+
+const COLUMNS = [
+  {
+    title: "Product",
+    links: [
+      { label: "Live demo", href: "/#demo" },
+      { label: "Proof", href: "/proof" },
+      { label: "Documentation", href: "/docs" },
+    ],
+  },
+  {
+    title: "Packages",
+    links: [
+      { label: "crates.io", href: LINKS.crates },
+      { label: "docs.rs", href: LINKS.docsRs },
+      { label: "Changelog", href: LINKS.changelog },
+    ],
+  },
+  {
+    title: "Project",
+    links: [
+      { label: "GitHub", href: LINKS.github },
+      { label: "Releases", href: LINKS.releases },
+      { label: "Issues", href: LINKS.issues },
+    ],
+  },
+];
+---
+
+<footer class="footer">
+  <div class="frame footer-grid">
+    <div class="footer-brand">
+      <a class="brand" href="/">
+        <img src="/assets/logo.svg" alt="" width="36" height="36" />
+        <span>AeroSieve</span>
+      </a>
+      <p>Keep the speech. Drop the rest.</p>
+    </div>
+    {COLUMNS.map(({ title, links }) => (
+      <div class="footer-column">
+        <h2>{title}</h2>
+        <ul>
+          {links.map(({ label, href }) => <li><a href={href}>{label}</a></li>)}
+        </ul>
+      </div>
+    ))}
+  </div>
+  <div class="frame footer-base">
+    <a href={LINKS.github} aria-label="AeroSieve on GitHub"><GithubMark /></a>
+    <p>MIT licensed · Built by <a href={LINKS.author}>Kunal Roy Choudhury</a></p>
+  </div>
+</footer>
+
+<style>
+  .footer { background: #09090b; color: #fafafa; }
+  .footer::after { content: ""; display: block; height: 32px; background: url("/assets/dither-dark.svg") 0 0 / 512px repeat-x; }
+  .frame { border-color: #27272a; }
+  .footer-grid { display: grid; grid-template-columns: 2fr repeat(3, 1fr); }
+  .footer-grid > * { padding: 56px 48px; }
+  .footer-grid > * + * { border-left: 1px solid #27272a; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 600; text-decoration: none; }
+  .footer-brand p { margin-top: 16px; color: #a1a1aa; }
+  h2 { font-size: 16px; font-weight: 500; }
+  ul { display: grid; gap: 12px; margin-top: 20px; padding: 0; list-style: none; }
+  li a { color: #a1a1aa; text-decoration: none; font-size: 15px; }
+  li a:hover { color: #fafafa; }
+  .footer-base { display: flex; align-items: center; gap: 20px; padding: 24px 48px 40px; color: #a1a1aa; font-size: 13px; }
+  .footer-base a { color: #a1a1aa; }
+  .footer-base a:hover { color: #fafafa; }
+  @media (max-width: 860px) {
+    .footer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .footer-grid > * { padding: 32px 16px; }
+    .footer-brand { grid-column: 1 / -1; }
+    .footer-grid > * + * { border-top: 1px solid #27272a; }
+    .footer-brand + * { border-left: 0; }
+    .footer-base { padding-inline: 16px; }
+  }
+</style>

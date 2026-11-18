@@ -1,0 +1,79 @@
+---
+import Section from "../Section.astro";
+import Cells from "./Cells.astro";
+import Head from "./Head.astro";
+
+const BUGS = [
+  {
+    found: "Found on real speech",
+    title: "Phone audio read as a tone",
+    text: "Low-bitrate codecs cut speech off near 3 kHz, and the empty top of the flatness band rejected 38% of 8 kHz utterances as tonal. Flatness now leaves out band edges the recording does not carry. Tones and hum still score 0, and every SieveBench score is unchanged.",
+    before: "75%",
+    after: "93%",
+    caption: "of Gram Vaani phone audio retained",
+  },
+  {
+    found: "Found by SieveBench",
+    title: "Clipping hid behind loudness leveling",
+    text: "A loud, clipped file was turned down 3 dB before scoring, so its flat tops sat at 0.7 and passed as clean. Clipping is now measured against the source's own full scale.",
+    before: "Passed as clean",
+    after: "Measured at source scale",
+    caption: "a clipped file turned down 3 dB",
+    words: true,
+  },
+  {
+    found: "Found by SieveBench",
+    title: "Speech was cut at every word gap",
+    text: "A 100 ms pause ended a clip, so natural speech broke into fragments under 3 s and was dropped: 23 of 73 clean English recordings produced nothing. Pauses under 500 ms are now bridged.",
+    before: "16.4 min",
+    after: "25.6 min",
+    caption: "of kept Hindi speech from the same 43 min",
+  },
+];
+---
+
+<Section id="bugs" cross>
+  <Head label="What testing found" title="Three bugs in AeroSieve itself">
+    Each one stayed hidden until the benchmark or the real recordings exposed it. The numbers are before and after the fix.
+  </Head>
+  <Cells cols={3}>
+    {BUGS.map(({ found, title, text, before, after, caption, words }) => (
+      <article class="bug">
+        <p class="label">{found}</p>
+        <h3>{title}</h3>
+        <p class="text">{text}</p>
+        <div class:list={["change", { words }]}>
+          <span class="before">{before}</span>
+          <span class="arrow" aria-hidden="true">→</span>
+          <span class="after">{after}</span>
+        </div>
+        <p class="fine">{caption}</p>
+      </article>
+    ))}
+  </Cells>
+</Section>
+
+<style>
+  .bug { display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 16px; }
+  .bug h3 { font-size: 20px; line-height: 1.3; }
+  .text { color: var(--ink-soft); }
+  .change {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    align-content: start;
+    min-height: 96px;
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font: 300 28px/1.2 var(--sans);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .before { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+  .arrow { color: var(--muted); font-size: 20px; }
+  .after { color: var(--brand); }
+  .change.words { flex-direction: column; align-items: flex-start; gap: 2px; font-size: 18px; letter-spacing: -0.01em; }
+  .words .arrow { transform: rotate(90deg); }
+</style>

@@ -1,0 +1,23 @@
+---
+import Base from "../layouts/Base.astro";
+import Bugs from "../components/proof/Bugs.astro";
+import Hero from "../components/proof/Hero.astro";
+import Limits from "../components/proof/Limits.astro";
+import RealSpeech from "../components/proof/RealSpeech.astro";
+import Reproduce from "../components/proof/Reproduce.astro";
+import SieveBench from "../components/proof/SieveBench.astro";
+import Speed from "../components/proof/Speed.astro";
+---
+
+<Base
+  title="Proof | AeroSieve"
+  description="Reproducible evidence for AeroSieve: rejected clips on real Hindi phone speech transcribe worse, an injected-defect benchmark in six languages, the bugs testing found, and the limits that remain."
+>
+  <Hero />
+  <RealSpeech />
+  <SieveBench />
+  <Bugs />
+  <Speed />
+  <Limits />
+  <Reproduce />
+</Base>

@@ -1,0 +1,23 @@
+---
+import Closing from "../components/home/Closing.astro";
+import Demo from "../components/home/Demo.astro";
+import Features from "../components/home/Features.astro";
+import Hero from "../components/home/Hero.astro";
+import ProofTeaser from "../components/home/ProofTeaser.astro";
+import Steps from "../components/home/Steps.astro";
+import TestedOn from "../components/home/TestedOn.astro";
+import Base from "../layouts/Base.astro";
+---
+
+<Base
+  title="AeroSieve — keep the speech, drop the rest"
+  description="Open-source speech data curation in Rust. Cuts raw recordings into clips, rejects noise, clipping, tones and silence with a reason for each, and writes WebDataset shards. Try it in your browser."
+>
+  <Hero />
+  <TestedOn />
+  <Features />
+  <ProofTeaser />
+  <Demo />
+  <Steps />
+  <Closing />
+</Base>

@@ -1,0 +1,74 @@
+---
+import Section from "../Section.astro";
+import Art from "./Art.astro";
+
+const FEATURES = [
+  { art: "decode", title: "Decode anything", text: "wav, mp3, flac, ogg or mp4 at any sample rate, resampled to 16 kHz mono and leveled without hiding clipping." },
+  { art: "segment", title: "Cut into speech clips", text: "Finds where speech starts and stops and cuts clips of 3 to 30 seconds, without breaking at every word gap." },
+  { art: "measure", title: "Four measurements per clip", text: "WADA-SNR, loudness, clipping and spectral flatness. No reference audio and no model, so it runs on any CPU." },
+  { art: "reasons", title: "A reason for every rejection", text: "Each dropped clip is low_snr, clipping, tonal, too_quiet, too_loud or silence. Thresholds are one JSON file." },
+  { art: "stream", title: "Same verdict live or batch", text: "The batch segmenter is the streaming one fed the whole file, so a live call and a corpus run cannot disagree." },
+] as const;
+
+const INTERFACES = [
+  { name: "Command line", href: "/docs/cli" },
+  { name: "Rust library", href: "/docs/rust" },
+  { name: "Python bindings", href: "/docs/python" },
+  { name: "WebSocket server", href: "/docs/streaming" },
+  { name: "WebAssembly", href: "/#demo" },
+];
+---
+
+<Section tone="canvas">
+  <div class="intro">
+    <p class="label">How it works</p>
+    <h2 class="title">Every dropped clip comes with a reason</h2>
+    <p class="lede">Raw audio in, WebDataset shards out, and a plain answer for anything left behind.</p>
+  </div>
+</Section>
+
+<Section tone="surface" cross>
+  <div class="grid">
+    {FEATURES.map(({ art, title, text }) => (
+      <article class="cell">
+        <Art name={art} />
+        <div class="cell-copy">
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </div>
+      </article>
+    ))}
+    <ul class="cell interfaces">
+      {INTERFACES.map(({ name, href }) => (
+        <li><a href={href}><span class="mark" aria-hidden="true"></span>{name}<span class="arrow" aria-hidden="true">→</span></a></li>
+      ))}
+    </ul>
+  </div>
+</Section>
+
+<style>
+  .intro { padding: 96px 48px 72px; text-align: center; }
+  .intro .lede { margin: 12px auto 0; }
+  .intro .label { margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .cell { border-bottom: 1px solid var(--line); }
+  .cell:not(:nth-child(3n + 1)) { border-left: 1px solid var(--line); }
+  .cell:nth-last-child(-n + 3) { border-bottom: 0; }
+  .cell-copy { padding: 24px 28px 36px; }
+  h3 { font-size: 18px; font-weight: 600; line-height: 28px; }
+  .cell-copy p { margin-top: 10px; font-size: 15px; line-height: 1.55; color: var(--muted); }
+  .interfaces { display: flex; flex-direction: column; padding: 0; list-style: none; }
+  .interfaces li { flex: 1; border-bottom: 1px solid var(--line); }
+  .interfaces li:last-child { border-bottom: 0; }
+  .interfaces a { display: flex; align-items: center; gap: 14px; height: 100%; min-height: 64px; padding: 0 28px; font-size: 18px; font-weight: 600; text-decoration: none; }
+  .interfaces .mark { width: 10px; height: 10px; border: 1.5px solid var(--accent); }
+  .interfaces .arrow { margin-left: auto; color: var(--muted); transition: transform 0.2s var(--ease); }
+  .interfaces a:hover { background: var(--accent-faint); }
+  .interfaces a:hover .arrow { transform: translateX(3px); color: var(--ink); }
+  @media (max-width: 900px) {
+    .intro { padding: 64px 20px 48px; }
+    .grid { grid-template-columns: 1fr; }
+    .cell { border-left: 0 !important; border-bottom: 1px solid var(--line) !important; }
+    .cell:last-child { border-bottom: 0 !important; }
+  }
+</style>

@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Reproduce every SieveBench report on the site: downloads public speech
-# corpora (CC BY 4.0), extracts them, and writes site/data/sievebench-*.json.
+# corpora (CC BY 4.0), extracts them, and writes site/public/data/sievebench-*.json.
 # Usage: crates/aerosieve-sievebench/scripts/run_all.sh [work-dir]
 set -eu
 
@@ -18,7 +18,7 @@ fetch() {
 }
 
 run() {
-  "$bench" "$work/$1" --name "$2" --source "$3" --out "$root/site/data/sievebench-$1.json"
+  "$bench" "$work/$1" --name "$2" --source "$3" --out "$root/site/public/data/sievebench-$1.json"
 }
 
 fetch en "https://huggingface.co/datasets/hf-internal-testing/librispeech_asr_dummy/resolve/refs%2Fconvert%2Fparquet/clean/validation/0000.parquet"
@@ -31,4 +31,4 @@ for pair in hi:Hindi ta:Tamil bn:Bengali te:Telugu mr:Marathi; do
   run "$code" "${pair#*:}" "FLEURS dev split"
   corpora="$corpora,\"$code\""
 done
-printf '[%s]\n' "$corpora" > "$root/site/data/sievebench-index.json"
+printf '[%s]\n' "$corpora" > "$root/site/public/data/sievebench-index.json"

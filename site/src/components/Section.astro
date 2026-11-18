@@ -1,0 +1,32 @@
+---
+interface Props {
+  id?: string;
+  tone?: "canvas" | "surface" | "sunken" | "dither";
+  cross?: boolean;
+}
+
+const { id, tone = "canvas", cross = false } = Astro.props;
+---
+
+<section id={id} class:list={["band", `tone-${tone}`, { "dither": tone === "dither" }]}>
+  <div class="frame band-inner">
+    {cross && (
+      <>
+        <span class="mark start" aria-hidden="true"></span>
+        <span class="mark end" aria-hidden="true"></span>
+      </>
+    )}
+    <slot />
+  </div>
+</section>
+
+<style>
+  .band { border-top: 1px solid var(--line); overflow-x: clip; }
+  .tone-canvas { background: var(--canvas); }
+  .tone-surface { background: var(--surface); }
+  .tone-sunken { background: var(--sunken); }
+  .band-inner { position: relative; }
+  .mark { top: -11px; z-index: 1; }
+  .start { left: -11px; }
+  .end { right: -11px; }
+</style>

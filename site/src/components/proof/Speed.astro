@@ -1,0 +1,54 @@
+---
+import Section from "../Section.astro";
+import Cells from "./Cells.astro";
+import Head from "./Head.astro";
+
+const TIMINGS = [
+  { value: "2.75 s", label: "43 min of Hindi as 48 kHz FLAC, 8 threads" },
+  { value: "8.1 s", label: "the same on one thread, mostly decoding and resampling" },
+  { value: "0.55 s", label: "the same as 16 kHz WAV, 8 threads" },
+  { value: "14.8 ms", label: "p95 verdict latency with 1,000 live streams" },
+];
+---
+
+<Section id="speed" cross>
+  <Head label="Speed" title="Measured on a laptop CPU, with no GPU">
+    All timings are from one Core i5-9300H laptop with 4 cores and 8 threads.
+  </Head>
+  <Cells cols={2}>
+    <div class="big">
+      <p class="metric is-hero">940×</p>
+      <p class="label">faster than real time</p>
+    </div>
+    <div class="how">
+      <p>
+        43 minutes of Hindi as 48 kHz FLAC is decoded, resampled, segmented, scored and sharded in 2.75 s on 8 threads.
+      </p>
+      <p>
+        Files are inspected in parallel and written in input order, so the shards are identical to a single-threaded run.
+      </p>
+    </div>
+  </Cells>
+  <Cells cols={4}>
+    {TIMINGS.map(({ value, label }) => (
+      <div class="timing">
+        <p class="metric">{value}</p>
+        <p class="fine">{label}</p>
+      </div>
+    ))}
+  </Cells>
+  <Cells>
+    <div>
+      <p class="fine worst">
+        The live-stream figure comes from streams started over 10 s, with the load generator on the same machine. Started all at once, the worst case, 1,000 streams reach 117.2 ms at p95. No verdict can arrive before 500 ms of pause has been heard.
+      </p>
+    </div>
+  </Cells>
+</Section>
+
+<style>
+  .big { display: grid; align-content: center; gap: 12px; }
+  .how { display: grid; align-content: center; gap: 16px; color: var(--ink-soft); }
+  .timing { display: grid; align-content: start; gap: 12px; }
+  .worst { max-width: 90ch; }
+</style>

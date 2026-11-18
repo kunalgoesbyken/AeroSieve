@@ -1,0 +1,24 @@
+---
+interface Props {
+  label: string;
+  title: string;
+}
+
+const { label, title } = Astro.props;
+const hasLede = Astro.slots.has("default");
+---
+
+<header class="head">
+  <p class="label">{label}</p>
+  <h2 class="title">{title}</h2>
+  {hasLede && <p class="lede"><slot /></p>}
+</header>
+
+<style>
+  .head {
+    display: grid;
+    gap: 16px;
+    padding: clamp(40px, 7vw, 72px) clamp(24px, 4vw, 48px) clamp(32px, 5vw, 48px);
+  }
+  .head .title { max-width: 36ch; text-wrap: balance; }
+</style>

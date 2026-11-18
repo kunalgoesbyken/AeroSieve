@@ -1,0 +1,66 @@
+---
+import HeroFrame from "../HeroFrame.astro";
+---
+
+<HeroFrame>
+  <div class="intro">
+    <p class="label">Proof</p>
+    <h1 class="display">Every number here can be reproduced, and so can the <strong>results that did not help</strong>.</h1>
+    <p class="lede">
+      Evidence from real phone speech and from damage injected on purpose, the bugs that testing found in AeroSieve itself, and what it still does not do. Each section names the script behind it.
+    </p>
+  </div>
+  <div class="stats">
+    <a class="stat" href="#real-speech">
+      <span class="label">Real phone speech</span>
+      <span class="metric">+8.9</span>
+      <span class="note">points higher WER on the utterances it rejects, Whisper-large-v3</span>
+    </a>
+    <a class="stat" href="#sievebench">
+      <span class="label">SieveBench</span>
+      <span class="metric" data-bench-caught>24,385</span>
+      <span class="note">of <span data-bench-expected>24,409</span> damaged clips, rejected as they should be</span>
+    </a>
+    <a class="stat" href="#speed">
+      <span class="label">Speed</span>
+      <span class="metric">940×</span>
+      <span class="note">faster than real time on one laptop</span>
+    </a>
+    <a class="stat" href="#speed">
+      <span class="label">Live verdicts</span>
+      <span class="metric">14.8 ms</span>
+      <span class="note">p95 latency with 1,000 live streams</span>
+    </a>
+  </div>
+</HeroFrame>
+
+<style>
+  .intro {
+    display: grid;
+    gap: 24px;
+    padding: clamp(28px, 5vw, 56px) clamp(20px, 3vw, 32px);
+  }
+  .intro .display { max-width: 30ch; }
+  .intro .lede { max-width: 72ch; }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    border-top: 1px solid var(--line);
+    background: var(--line);
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding: clamp(24px, 3vw, 32px);
+    background: var(--surface);
+    text-decoration: none;
+    transition: background 0.2s var(--ease);
+  }
+  .stat:hover { background: var(--accent-faint); }
+  .note { font-size: 14px; line-height: 20px; color: var(--muted); }
+  @media (max-width: 900px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .stats { grid-template-columns: minmax(0, 1fr); } }
+</style>

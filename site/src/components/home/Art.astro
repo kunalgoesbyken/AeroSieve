@@ -1,0 +1,121 @@
+---
+interface Props {
+  name: "decode" | "segment" | "measure" | "reasons" | "stream";
+}
+
+const { name } = Astro.props;
+---
+
+<div class="art" aria-hidden="true">
+  <svg viewBox="0 0 320 180" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    {name === "decode" && (
+      <g>
+        {["wav", "mp3", "flac", "ogg", "mp4"].map((label, index) => (
+          <g transform={`translate(28 ${16 + index * 30})`}>
+            <rect width="44" height="22" class="tile" />
+            <text x="22" y="15" class="tile-text">{label}</text>
+            <path d={`M44 11 C 90 11, 100 ${74 - index * 30}, 140 ${74 - index * 30}`} class="wire" />
+          </g>
+        ))}
+        <rect x="140" y="66" width="44" height="44" class="core" />
+        <path d="M152 88h4m4-8v16m4-12v8m4-14v20m4-10v0" class="core-mark" />
+        <path d="M184 88h28" class="wire" />
+        <path d="M212 88 l6 -10 l6 20 l6 -24 l6 28 l6 -18 l6 10 l6 -6 l6 4 l6 -4 l6 0" class="accent" />
+        <text x="250" y="124" class="caption">16 kHz mono</text>
+      </g>
+    )}
+    {name === "segment" && (
+      <g>
+        <path d="M16 90h288" class="faint" />
+        {Array.from({ length: 48 }, (_, i) => {
+          const h = [6, 18, 30, 22, 34, 14, 4, 2, 4, 20, 36, 28, 40, 18, 26, 8, 2, 3, 2, 12, 30, 38, 24, 32, 20, 10, 3, 2, 3, 6, 24, 34, 40, 30, 18, 26, 12, 4, 2, 3, 2, 16, 28, 36, 22, 30, 14, 6][i];
+          return <path d={`M${20 + i * 6} ${90 - h / 2}v${h}`} class={h > 5 ? "bar" : "faint"} />;
+        })}
+        <path d="M26 46v-8h80v8M128 46v-8h70v8M200 46v-8h84v8" class="accent" />
+        <text x="66" y="30" class="caption">clip 1</text>
+        <text x="163" y="30" class="caption">clip 2</text>
+        <text x="242" y="30" class="caption">clip 3</text>
+        <text x="160" y="150" class="caption">pauses under 500 ms are bridged</text>
+      </g>
+    )}
+    {name === "measure" && (
+      <g>
+        {[
+          { label: "SNR", value: 0.72 },
+          { label: "dBFS", value: 0.55 },
+          { label: "clip", value: 0.12 },
+          { label: "flat", value: 0.4 },
+        ].map(({ label, value }, index) => (
+          <g transform={`translate(${46 + index * 64} 24)`}>
+            <rect width="28" height="120" class="tile" />
+            <rect y={120 - value * 120} width="28" height={value * 120} class="fill" />
+            <path d={`M-6 ${120 - 0.3 * 120}h40`} class="threshold" />
+            <text x="14" y="140" class="caption">{label}</text>
+          </g>
+        ))}
+      </g>
+    )}
+    {name === "reasons" && (
+      <g>
+        {[
+          { label: "accept", x: 24, y: 28, tone: "keep" },
+          { label: "low_snr", x: 128, y: 28, tone: "drop" },
+          { label: "clipping", x: 224, y: 28, tone: "drop" },
+          { label: "tonal", x: 24, y: 80, tone: "drop" },
+          { label: "too_quiet", x: 112, y: 80, tone: "drop" },
+          { label: "too_loud", x: 216, y: 80, tone: "drop" },
+          { label: "silence", x: 120, y: 132, tone: "drop" },
+        ].map(({ label, x, y, tone }) => (
+          <g transform={`translate(${x} ${y})`}>
+            <rect width={label.length * 8 + 28} height="26" class={tone === "keep" ? "chip-keep" : "tile"} />
+            <rect x="9" y="10" width="6" height="6" class={tone === "keep" ? "dot-keep" : "dot-drop"} />
+            <text x="22" y="17" class="chip-text">{label}</text>
+          </g>
+        ))}
+      </g>
+    )}
+    {name === "stream" && (
+      <g>
+        <text x="20" y="44" class="caption-left">live, any chunking</text>
+        <text x="20" y="144" class="caption-left">batch, whole file</text>
+        {[30, 54, 70, 98, 110, 140].map((x) => <path d={`M${x} 60v12`} class="bar" />)}
+        <path d="M24 66 C 120 66, 140 90, 196 90" class="wire" />
+        <path d="M24 114 C 120 114, 140 90, 196 90" class="wire" />
+        <path d="M24 114h150" class="faint" />
+        <rect x="196" y="72" width="36" height="36" class="core" />
+        <path d="M206 90l6 6l10 -12" class="accent" />
+        <path d="M232 90h72" class="wire" />
+        <text x="268" y="80" class="caption">same verdict</text>
+      </g>
+    )}
+  </svg>
+</div>
+
+<style>
+  .art {
+    height: 200px;
+    display: grid;
+    place-items: center;
+    padding: 12px 20px;
+    background-image: radial-gradient(var(--line-strong) 1px, transparent 1.2px);
+    background-size: 16px 16px;
+    background-position: 8px 8px;
+  }
+  svg { width: 100%; height: 100%; max-width: 360px; }
+  .tile { fill: var(--surface); stroke: var(--line-strong); }
+  .tile-text, .chip-text { fill: var(--ink-soft); font: 500 10px var(--mono); }
+  .tile-text { text-anchor: middle; }
+  .wire { stroke: var(--accent); stroke-width: 1.2; opacity: 0.55; }
+  .accent { stroke: var(--accent); stroke-width: 2; }
+  .core { fill: var(--accent-faint); stroke: var(--accent); stroke-width: 1.5; }
+  .core-mark { stroke: var(--accent); stroke-width: 2; }
+  .bar { stroke: var(--accent); stroke-width: 3; }
+  .faint { stroke: var(--line-strong); stroke-width: 1.5; }
+  .fill { fill: var(--accent-soft); stroke: var(--accent); }
+  .threshold { stroke: var(--ink); stroke-dasharray: 3 3; }
+  .caption { fill: var(--muted); font: 10px var(--mono); text-anchor: middle; }
+  .caption-left { fill: var(--muted); font: 10px var(--mono); }
+  .chip-keep { fill: var(--accent-faint); stroke: var(--accent); }
+  .dot-keep { fill: var(--accent); }
+  .dot-drop { fill: var(--ink-soft); }
+</style>

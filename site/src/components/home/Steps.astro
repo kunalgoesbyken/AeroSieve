@@ -1,0 +1,126 @@
+---
+import Section from "../Section.astro";
+
+const STEPS = [
+  {
+    id: "install",
+    title: "Install the CLI",
+    text: "One binary from crates.io. Python bindings build from source with maturin.",
+    copy: "cargo install aerosieve-cli",
+    code: `$ cargo install aerosieve-cli
+$ aerosieve --help
+
+# Python
+$ pip install maturin
+$ pip install ./bindings/python`,
+  },
+  {
+    id: "inspect",
+    title: "See how it judges your audio",
+    text: "inspect prints a verdict for every clip and writes nothing, so you can check thresholds first.",
+    copy: "aerosieve inspect recordings/",
+    code: `$ aerosieve inspect recordings/
+recordings/call-0412.wav (33.6 s, 8000 Hz source)
+    START  LENGTH   SNR dB     dBFS   CLIP  FLATNESS  VERDICT
+     0.0s   23.4s     20.4    -23.7  0.000     0.149  accept
+    23.4s   10.2s     18.1    -26.0  0.000     0.182  accept`,
+  },
+  {
+    id: "curate",
+    title: "Curate a folder into shards",
+    text: "Kept clips go into WebDataset tar shards with a manifest and run totals. Transcripts come from matching .txt files.",
+    copy: "aerosieve curate recordings/ --out data/run-1",
+    code: `$ aerosieve curate recordings/ --out data/run-1
+
+data/run-1/
+  shard-000000.tar   {key}.wav and {key}.json per clip
+  manifest.jsonl     key, shard, transcript, metrics
+  stats.json         totals and rejections by reason`,
+  },
+  {
+    id: "whole",
+    title: "Score pre-cut utterances",
+    text: "For a corpus already cut and transcribed per utterance, score each file whole so it stays matched to its transcript.",
+    copy: 'aerosieve.inspect("utt-0001.flac", whole=True)',
+    code: `import aerosieve
+
+clip = aerosieve.inspect("utt-0001.flac", whole=True)["clips"][0]
+keep = clip["verdict"] == "accept"`,
+  },
+  {
+    id: "stream",
+    title: "Gate live audio",
+    text: "aerosieve-serve returns each utterance's verdict over a WebSocket as soon as its closing pause is heard.",
+    copy: "cargo install aerosieve-serve",
+    code: `$ cargo install aerosieve-serve
+$ aerosieve-serve
+
+← {"type":"ready","sample_rate":16000,"encoding":"pcm_s16le"}
+→ <20 ms PCM frame> <20 ms PCM frame> ...
+← {"type":"clip","start_s":0.51,"duration_s":4.92,"verdict":"accept"}
+← {"type":"clip","start_s":7.30,"duration_s":9.12,"verdict":"low_snr"}`,
+  },
+];
+---
+
+<Section tone="canvas">
+  <div class="head">
+    <p class="label">Get started</p>
+    <h2 class="title">From a folder of audio to shards</h2>
+    <p class="lede">Install one binary, check what it would drop, then curate. The same engine scores pre-cut utterances and live calls.</p>
+  </div>
+</Section>
+
+<Section tone="canvas" cross>
+  <div class="steps">
+    <div class="steps-grid" data-tabs>
+      <div class="list" role="tablist" aria-label="Steps" aria-orientation="vertical">
+        {STEPS.map(({ id, title, text }, index) => (
+          <button type="button" role="tab" id={`step-${id}`} aria-controls={`code-${id}`} aria-selected={String(index === 0)}>
+            <span class="step-title">{title}<span class="arrow" aria-hidden="true">↘</span></span>
+            <span class="step-text">{text}</span>
+          </button>
+        ))}
+      </div>
+      <div class="code-card">
+        {STEPS.map(({ id, code, copy }, index) => (
+          <div class="panel" role="tabpanel" id={`code-${id}`} aria-labelledby={`step-${id}`} hidden={index !== 0}>
+            <div class="panel-head">
+              <button type="button" class="copy-command" data-copy={copy}>
+                <span class="copy">Copy command</span><span class="copied">Copied</span>
+              </button>
+            </div>
+            <pre><code>{code}</code></pre>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</Section>
+
+<style>
+  .head { padding: 88px 48px 40px; border-top: 1px solid var(--line); }
+  .head .label { margin-bottom: 16px; }
+  .head .lede { margin-top: 12px; }
+  .steps { padding: 8px 48px 72px; }
+  .steps-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 48px; }
+  .list { display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+  [role="tab"] { display: grid; gap: 12px; padding: 24px 32px 24px 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer; }
+  .step-title { display: flex; justify-content: space-between; font-size: 18px; }
+  .step-title .arrow { color: var(--muted); }
+  .step-text { display: none; font-size: 16px; line-height: 1.6; color: var(--muted); }
+  [aria-selected="true"] .step-title { font-weight: 500; }
+  [aria-selected="true"] .step-title .arrow { transform: rotate(-90deg); color: var(--ink); }
+  [aria-selected="true"] .step-text { display: block; }
+  .code-card { display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--surface); }
+  .panel:not([hidden]) { display: flex; flex: 1; flex-direction: column; }
+  .panel-head { display: flex; justify-content: flex-end; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  pre { margin: 0; padding: 20px 16px 28px; overflow-x: auto; font-size: 13px; line-height: 1.7; }
+  @media (max-width: 900px) {
+    .head { padding: 56px 20px 28px; }
+    .steps { padding: 0 20px 56px; }
+    .steps-grid { grid-template-columns: 1fr; gap: 24px; }
+    .list { border-right: 0; }
+    [role="tab"] { padding-right: 0; }
+  }
+</style>

@@ -1,0 +1,74 @@
+---
+import { LINKS, NAV } from "../data/site.js";
+import GithubMark from "./GithubMark.astro";
+
+const stars = await fetch("https://api.github.com/repos/kunalgoesbyken/AeroSieve", {
+  headers: { "User-Agent": "aerosieve-site" },
+})
+  .then((response) => (response.ok ? response.json() : null))
+  .then((repo) => repo?.stargazers_count ?? null)
+  .catch(() => null);
+
+const path = Astro.url.pathname;
+const isCurrent = (href: string) => href !== "/#demo" && path.startsWith(href);
+---
+
+<header class="nav">
+  <div class="nav-left">
+    <a class="brand" href="/" aria-label="AeroSieve home">
+      <img src="/assets/logo.svg" alt="" width="28" height="28" />
+      <span>AeroSieve</span>
+    </a>
+    <nav aria-label="Main">
+      <ul>
+        {NAV.map(({ label, href }) => (
+          <li><a href={href} aria-current={isCurrent(href) ? "page" : undefined}>{label}</a></li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+  <div class="nav-right">
+    <a class="cell repo" href={LINKS.github} aria-label="AeroSieve on GitHub">
+      <GithubMark />
+      <span class="repo-name">AeroSieve</span>
+      {stars > 0 && <span class="stars">★ {stars}</span>}
+    </a>
+    <div class="cell cta"><a class="button" href="/docs">Documentation</a></div>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    height: 72px;
+    padding-left: 24px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .nav-left, .nav-right { display: flex; align-items: center; }
+  .nav-left { gap: 40px; }
+  .brand { display: flex; flex-shrink: 0; align-items: center; gap: 10px; font-weight: 600; font-size: 17px; text-decoration: none; }
+  nav ul { display: flex; gap: 28px; padding: 0; list-style: none; }
+  nav a { text-decoration: none; color: var(--ink-soft); }
+  nav a:hover, nav a[aria-current="page"] { color: var(--ink); }
+  nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 8px; }
+  .cell { height: 100%; display: flex; align-items: center; padding-inline: 24px; border-left: 1px solid var(--line); }
+  .repo { gap: 10px; text-decoration: none; font-size: 15px; }
+  .stars { padding: 2px 8px; background: var(--sunken); color: var(--muted); font: 400 12px/20px var(--mono); }
+  @media (max-width: 760px) {
+    .nav { padding-left: 16px; }
+    .nav-left { gap: 20px; }
+    nav ul { gap: 16px; font-size: 15px; }
+    .repo-name, .stars, .cta { display: none; }
+    .repo { padding-inline: 16px; }
+  }
+  @media (max-width: 420px) {
+    .brand span { display: none; }
+  }
+</style>

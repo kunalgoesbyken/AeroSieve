@@ -6,7 +6,7 @@
 
 ![AeroSieve: keep the speech, drop the rest. The in-browser demo judging a recording clip by clip, with a reason for every dropped clip](.github/readme-card.webp)
 
-**[Try it in your browser →](https://aerosieve.vercel.app)** The demo runs this Rust code compiled to WebAssembly, so your audio never leaves the page.
+**[Try it in your browser →](https://aerosieve.kunalrc.xyz)** The demo runs this Rust code compiled to WebAssembly, so your audio never leaves the page.
 
 AeroSieve turns raw audio recordings into training data for speech models. It decodes each file, cuts it into speech clips, drops the clips that are silent, noisy, clipped, or not speech, and writes the rest as [WebDataset](https://github.com/webdataset/webdataset) shards. Every clip it drops comes with a reason.
 
@@ -43,7 +43,7 @@ Rejected audio is harder for both models, and the gap holds within 8 kHz audio a
 - FLEURS volunteers recorded on their own devices, so some untouched clips really are noisy; most of what Hindi, Tamil and Bengali lose is already under the 10 dB floor.
 - WADA-SNR lands within about 1.3 dB of the injected level for white and pink noise from 0 to 20 dB. Babble reads up to 2.7 dB cleaner than it is.
 
-`crates/aerosieve-sievebench/scripts/run_all.sh` reproduces every number above; the reports are in [`site/data`](site/data).
+`crates/aerosieve-sievebench/scripts/run_all.sh` reproduces every number above; the reports are in [`site/public/data`](site/public/data).
 
 ### Bugs the testing found
 

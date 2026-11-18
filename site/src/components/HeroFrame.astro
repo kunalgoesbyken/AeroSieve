@@ -1,0 +1,36 @@
+<section class="hero dither">
+  <div class="frame hero-frame">
+    <div class="hero-box">
+      <span class="mark top-start" aria-hidden="true"></span>
+      <span class="mark top-end" aria-hidden="true"></span>
+      <span class="mark bottom-start" aria-hidden="true"></span>
+      <span class="mark bottom-end" aria-hidden="true"></span>
+      <slot />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero { overflow-x: clip; border-bottom: 1px solid var(--line); }
+  .hero-frame { padding-block: 80px; }
+  .hero-box { position: relative; background: var(--canvas); }
+  .hero-box::before,
+  .hero-box::after {
+    content: "";
+    position: absolute;
+    left: -100vw;
+    right: -100vw;
+    height: 1px;
+    background: var(--line);
+  }
+  .hero-box::before { top: -1px; }
+  .hero-box::after { bottom: -1px; }
+  .mark { z-index: 1; }
+  .top-start { top: -11px; left: -11px; }
+  .top-end { top: -11px; right: -11px; }
+  .bottom-start { bottom: -11px; left: -11px; }
+  .bottom-end { bottom: -11px; right: -11px; }
+  @media (max-width: 900px) {
+    .hero-frame { padding-block: 40px; }
+  }
+</style>

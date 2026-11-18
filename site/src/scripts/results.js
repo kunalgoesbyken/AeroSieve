@@ -53,8 +53,8 @@ const mountChartSwitch = (root, reports) => {
 };
 
 export async function mountResults(root) {
-  const corpora = await fetchJson("data/sievebench-index.json");
-  const reports = await Promise.all(corpora.map((id) => fetchJson(`data/sievebench-${id}.json`)));
+  const corpora = await fetchJson("/data/sievebench-index.json");
+  const reports = await Promise.all(corpora.map((id) => fetchJson(`/data/sievebench-${id}.json`)));
   const summary = totals(reports);
   root.querySelector("[data-languages]").replaceChildren(...reports.map(rowFor));
   Object.entries(summary).forEach(([name, value]) =>

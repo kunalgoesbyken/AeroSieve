@@ -1,0 +1,45 @@
+---
+const SOURCES = [
+  { name: "Gram Vaani", note: "Hindi phone speech" },
+  { name: "Whisper-large-v3", note: "recognizer" },
+  { name: "MMS-1B", note: "recognizer" },
+  { name: "LibriSpeech", note: "English" },
+  { name: "FLEURS", note: "5 Indian languages" },
+  { name: "51,352", note: "damaged recordings" },
+];
+---
+
+<section class="tested">
+  <div class="frame">
+    <p class="label">Tested on real and damaged speech</p>
+    <ul>
+      {SOURCES.map(({ name, note }) => (
+        <li>
+          <span class="name">{name}</span>
+          <span class="note label">{note}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .tested { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .label { text-align: center; padding: 12px; border-bottom: 1px solid var(--line); }
+  ul { display: grid; grid-template-columns: repeat(6, 1fr); padding: 0; list-style: none; }
+  li { display: grid; place-items: center; gap: 4px; padding: 28px 12px; text-align: center; }
+  li + li { border-left: 1px solid var(--line); }
+  .name { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .note { padding: 0; border: 0; font-size: 11px; }
+  @media (max-width: 900px) {
+    ul { grid-template-columns: repeat(3, 1fr); }
+    li:nth-child(n + 4) { border-top: 1px solid var(--line); }
+    li:nth-child(4) { border-left: 0; }
+  }
+  @media (max-width: 520px) {
+    ul { grid-template-columns: repeat(2, 1fr); }
+    li { border-left: 0 !important; border-top: 1px solid var(--line); }
+    li:nth-child(even) { border-left: 1px solid var(--line) !important; }
+    li:nth-child(-n + 2) { border-top: 0; }
+  }
+</style>
