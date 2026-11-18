@@ -103,6 +103,60 @@ fn flatness_ignores_content_outside_the_speech_band() {
     assert!((alone - with_hiss).abs() < 0.02, "{alone} vs {with_hiss}");
 }
 
+/// `samples` with every frequency outside `[low_hz, high_hz]` removed.
+fn band_limited(samples: &[f32], low_hz: f32, high_hz: f32) -> Vec<f32> {
+    let mut planner = realfft::RealFftPlanner::<f32>::new();
+    let forward = planner.plan_fft_forward(samples.len());
+    let inverse = planner.plan_fft_inverse(samples.len());
+    let mut input = samples.to_vec();
+    let mut spectrum = forward.make_output_vec();
+    forward.process(&mut input, &mut spectrum).unwrap();
+
+    let bin_hz = SAMPLE_RATE as f32 / samples.len() as f32;
+    for (index, bin) in spectrum.iter_mut().enumerate() {
+        let hz = index as f32 * bin_hz;
+        if hz < low_hz || hz > high_hz {
+            *bin = realfft::num_complex::Complex32::new(0.0, 0.0);
+        }
+    }
+    let mut output = inverse.make_output_vec();
+    inverse.process(&mut spectrum, &mut output).unwrap();
+    let scale = samples.len() as f32;
+    output.iter().map(|sample| sample / scale).collect()
+}
+
+#[test]
+fn flatness_ignores_band_edges_the_channel_does_not_carry() {
+    let speech = harmonic_speech(ONE_SECOND, 3);
+    let full = spectral_flatness(&speech, SAMPLE_RATE);
+
+    for (low_hz, high_hz) in [(0.0, 2_800.0), (600.0, 8_000.0), (600.0, 2_800.0)] {
+        let narrowed = band_limited(&speech, low_hz, high_hz);
+        let flatness = spectral_flatness(&narrowed, SAMPLE_RATE);
+        assert!(
+            flatness > 0.5 * full,
+            "{low_hz}-{high_hz} Hz: {flatness} vs {full} unfiltered"
+        );
+        assert_eq!(
+            verdict(&at_dbfs(narrowed, -20.0)),
+            None,
+            "{low_hz}-{high_hz} Hz"
+        );
+    }
+}
+
+#[test]
+fn flatness_still_counts_a_gap_inside_the_band() {
+    let speech = harmonic_speech(ONE_SECOND, 3);
+    let lower = band_limited(&speech, 0.0, 1_200.0);
+    let upper = band_limited(&speech, 2_000.0, 8_000.0);
+    let notched: Vec<f32> = lower.iter().zip(&upper).map(|(a, b)| a + b).collect();
+
+    assert!(
+        spectral_flatness(&notched, SAMPLE_RATE) < 0.5 * spectral_flatness(&speech, SAMPLE_RATE)
+    );
+}
+
 #[test]
 fn flatness_is_zero_when_the_band_is_above_nyquist() {
     assert_eq!(

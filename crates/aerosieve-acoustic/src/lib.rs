@@ -25,7 +25,7 @@ mod wada_table;
 mod tests;
 
 pub use policy::{FilterPolicy, RejectReason};
-pub use spectrum::{FLATNESS_BAND_HZ, FLATNESS_FFT_SIZE, spectral_flatness};
+pub use spectrum::{CARRIED_BAND_FLOOR_DB, FLATNESS_BAND_HZ, FLATNESS_FFT_SIZE, spectral_flatness};
 pub use wada::{WADA_MIN_SAMPLES, wada_snr_db};
 
 /// Full scale of audio that has not been rescaled since it was recorded.
