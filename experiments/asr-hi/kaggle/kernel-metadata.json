@@ -1,0 +1,16 @@
+{
+  "id": "krockxz/aerosieve-gv-asr",
+  "title": "aerosieve-gv-asr",
+  "code_file": "transcribe.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["krockxz/gv-hindi-devtest-flac"],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}

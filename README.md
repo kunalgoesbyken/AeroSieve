@@ -36,6 +36,20 @@ It is written in Rust, runs on CPU with no ML model by default, and can be used 
 - **Clipping hid behind loudness leveling.** A loud, clipped file was turned down 3 dB before scoring, so its flattened peaks sat near 0.7 and passed as clean. Clipping is now measured against the source's own full scale.
 - **Speech was cut at every word gap.** A 100 ms pause ended a clip, so natural speech broke into fragments under the 3 s minimum and was dropped: 23 of 73 clean English recordings produced no clip at all. Pauses under 500 ms are now bridged. On the same 43 minutes of Hindi, kept speech went from 16.4 to 25.6 minutes (+56%).
 
+### On real phone speech
+
+[`experiments/asr-hi`](experiments/asr-hi) scores 2,917 Gram Vaani Hindi utterances (7.8 h of spontaneous phone-collected speech, transcripts verified twice by humans) and transcribes them with two pretrained recognizers, no fine-tuning:
+
+| | Whisper-large-v3 | MMS-1B |
+| :--- | ---: | ---: |
+| WER on accepted utterances | 55.7% | 52.0% |
+| WER on rejected utterances | 64.6% | 60.6% |
+| Gap, 95% CI | +8.9 (+2.2 to +16.9) | +8.6 (+5.5 to +11.6) |
+
+- Rejected audio is harder for both models, and the gap holds within 8 kHz audio alone.
+- The signal comes from spectral flatness. The SNR check did not help here: its rejections were wideband clips with music beds, easier than average, and WADA-SNR barely tracked errors within a channel.
+- **It found a bug.** Low-bitrate codecs cut narrowband speech off near 3 kHz, and the empty top of the flatness band made 38% of 8 kHz utterances read as tones. Flatness now leaves out band edges the channel does not carry; retention went from 75% to 93%, with every SieveBench score unchanged.
+
 ## Speed
 
 43 minutes of Hindi as 48 kHz FLAC is decoded, resampled, segmented, scored and sharded in 2.75 s on 8 threads, about 940 times faster than real time (8.1 s on one thread, most of it decoding and resampling). As 16 kHz WAV it takes 0.55 s. Files are inspected in parallel and written in input order, so the shards are identical to a single-threaded run.
@@ -116,6 +130,8 @@ import aerosieve
 for clip in aerosieve.inspect("recording.wav")["clips"]:
     print(clip["start_s"], clip["duration_s"], clip["verdict"])
 
+verdict = aerosieve.inspect("utterance.wav", whole=True)["clips"][0]["verdict"]
+
 stats = aerosieve.curate(["a.wav", "b.mp3"], "data/run-1", transcripts=["hello", None])
 ```
 
@@ -170,7 +186,7 @@ Synthetic signals, from `cargo run --release --example report`:
 | white noise | −14.9 dB | −20.0 dBFS | 0.562 | `low_snr` |
 
 - **SNR** is estimated with [WADA-SNR](https://www.isca-archive.org/interspeech_2008/kim08e_interspeech.html), which needs only the clip itself and no clean reference.
-- **Flatness** separates tones and hum (near 0) from speech and noise. It is measured between 300 and 3400 Hz so that resampled audio is not mistaken for a tone.
+- **Flatness** separates tones and hum (near 0) from speech and noise. It is measured between 300 and 3400 Hz so that resampled audio is not mistaken for a tone, leaving out band edges more than 30 dB below the band's median so that a codec's cutoff is not either.
 
 Every threshold is a field of `FilterPolicy`.
 
@@ -180,9 +196,10 @@ By default speech is detected from signal level, so loud music counts as speech 
 
 ## Limitations
 
-- SieveBench's defects are injected, so it shows that the filters catch damage of known kinds and levels. It does not show that rejected real-world audio would have hurt a model; that needs a training run.
+- SieveBench's defects are injected, so it shows that the filters catch damage of known kinds and levels. The Gram Vaani check shows rejected real audio is harder to recognize, not that training without it gives a better model; that needs a training run ([`experiments/asr-hi/PLAN.md`](experiments/asr-hi/PLAN.md)).
+- On real phone speech the SNR floor rejected music-bed recordings that recognizers handled well. Check what it removes from your data before relying on it.
 - A single sustained instrument can pass as speech, and babble noise reads cleaner than it is.
-- One transcript is given per file and copied to every clip from that file. Transcripts are not aligned to clips, and there is no speech recognition.
+- When curating, one transcript is given per file and copied to every clip from that file. Transcripts are not aligned to clips, and there is no speech recognition. For audio already cut per utterance, score it whole with `inspect(..., whole=True)` instead.
 - Run `aerosieve inspect` on your own data before a large job; where to put the SNR floor is a real choice.
 
 ## License
