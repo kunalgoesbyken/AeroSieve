@@ -40,7 +40,7 @@ const INTERFACES = [
     ))}
     <ul class="cell interfaces">
       {INTERFACES.map(({ name, href }) => (
-        <li><a href={href}><span class="mark" aria-hidden="true"></span>{name}<span class="arrow" aria-hidden="true">→</span></a></li>
+        <li><a href={href}><span class="bullet" aria-hidden="true"></span>{name}<span class="arrow" aria-hidden="true">→</span></a></li>
       ))}
     </ul>
   </div>
@@ -55,13 +55,14 @@ const INTERFACES = [
   .cell:not(:nth-child(3n + 1)) { border-left: 1px solid var(--line); }
   .cell:nth-last-child(-n + 3) { border-bottom: 0; }
   .cell-copy { padding: 24px 28px 36px; }
+  article.cell:hover :global(.art) { background-color: var(--accent-faint); }
   h3 { font-size: 18px; font-weight: 600; line-height: 28px; }
   .cell-copy p { margin-top: 10px; font-size: 15px; line-height: 1.55; color: var(--muted); }
   .interfaces { display: flex; flex-direction: column; padding: 0; list-style: none; }
   .interfaces li { flex: 1; border-bottom: 1px solid var(--line); }
   .interfaces li:last-child { border-bottom: 0; }
   .interfaces a { display: flex; align-items: center; gap: 14px; height: 100%; min-height: 64px; padding: 0 28px; font-size: 18px; font-weight: 600; text-decoration: none; }
-  .interfaces .mark { width: 10px; height: 10px; border: 1.5px solid var(--accent); }
+  .interfaces .bullet { width: 10px; height: 10px; border: 1.5px solid var(--accent); }
   .interfaces .arrow { margin-left: auto; color: var(--muted); transition: transform 0.2s var(--ease); }
   .interfaces a:hover { background: var(--accent-faint); }
   .interfaces a:hover .arrow { transform: translateX(3px); color: var(--ink); }

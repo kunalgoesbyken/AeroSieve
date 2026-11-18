@@ -3,10 +3,15 @@ const PACKAGE = "/pkg/aerosieve_wasm.js";
 let ready;
 
 const load = () => {
-  ready ??= import(/* @vite-ignore */ PACKAGE).then(async (wasm) => {
-    await wasm.default();
-    return wasm;
-  });
+  ready ??= import(/* @vite-ignore */ PACKAGE)
+    .then(async (wasm) => {
+      await wasm.default();
+      return wasm;
+    })
+    .catch((error) => {
+      ready = undefined;
+      throw error;
+    });
   return ready;
 };
 
@@ -17,9 +22,4 @@ export async function inspect(bytes, extension) {
   const started = performance.now();
   const inspection = new Inspection(new Uint8Array(bytes), extension);
   return { inspection, elapsedMs: performance.now() - started };
-}
-
-export async function defaults() {
-  const { defaultPolicy } = await load();
-  return defaultPolicy();
 }

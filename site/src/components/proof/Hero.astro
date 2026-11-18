@@ -1,5 +1,6 @@
 ---
 import HeroFrame from "../HeroFrame.astro";
+import { count, TOTALS } from "../../data/sievebench.js";
 ---
 
 <HeroFrame>
@@ -18,8 +19,8 @@ import HeroFrame from "../HeroFrame.astro";
     </a>
     <a class="stat" href="#sievebench">
       <span class="label">SieveBench</span>
-      <span class="metric" data-bench-caught>24,385</span>
-      <span class="note">of <span data-bench-expected>24,409</span> damaged clips, rejected as they should be</span>
+      <span class="metric">{count(TOTALS.caught)}</span>
+      <span class="note">of {count(TOTALS.expected)} damaged clips, rejected as they should be</span>
     </a>
     <a class="stat" href="#speed">
       <span class="label">Speed</span>

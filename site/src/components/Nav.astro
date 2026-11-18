@@ -1,4 +1,5 @@
 ---
+import Logo from "../assets/logo.svg";
 import { LINKS, NAV } from "../data/site.js";
 import GithubMark from "./GithubMark.astro";
 
@@ -16,7 +17,7 @@ const isCurrent = (href: string) => href !== "/#demo" && path.startsWith(href);
 <header class="nav">
   <div class="nav-left">
     <a class="brand" href="/" aria-label="AeroSieve home">
-      <img src="/assets/logo.svg" alt="" width="28" height="28" />
+      <Logo width={28} height={28} aria-hidden="true" />
       <span>AeroSieve</span>
     </a>
     <nav aria-label="Main">

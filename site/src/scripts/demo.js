@@ -1,13 +1,12 @@
 import { element } from "./dom.js";
-import { defaults, extensionOf, inspect } from "./engine.js";
+import { extensionOf, inspect } from "./engine.js";
 import { fetchBytes } from "./http.js";
 import { ClipPlayer } from "./player.js";
 import { mountPolicyControls } from "./policy.js";
 import { describe, isKept } from "./verdicts.js";
-import { drawWaveform } from "./waveform.js";
+import { drawWaveform, ENVELOPE_POINTS } from "./waveform.js";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-const ENVELOPE_POINTS = 220;
 
 const seconds = (value) => `${value.toFixed(1)}s`;
 
@@ -23,8 +22,9 @@ export async function mountDemo(root) {
     samples: [...root.querySelectorAll("[data-sample]")],
   };
   const player = new ClipPlayer();
+  const snapshot = JSON.parse(root.dataset.demo);
   let current;
-  let policy = await defaults();
+  let policy = snapshot.policy;
 
   const setStatus = (message, isError = false) => {
     ui.status.textContent = message;
@@ -32,6 +32,7 @@ export async function mountDemo(root) {
   };
 
   const play = (clip, element) => {
+    if (!current) return;
     root.querySelectorAll(".is-playing").forEach((node) => node.classList.remove("is-playing"));
     element.classList.add("is-playing");
     player.play(clip.start_s, clip.duration_s, () => element.classList.remove("is-playing"));
@@ -78,17 +79,16 @@ export async function mountDemo(root) {
     );
   };
 
-  const renderStats = (clips) => {
-    const { inspection, name, elapsedMs } = current;
+  const renderStats = ({ name, durationS, sourceRate, clips, elapsedMs }) => {
     const kept = clips.filter(isKept);
     const keptSeconds = kept.reduce((total, clip) => total + clip.duration_s, 0);
     const values = [
       ["file", name],
-      ["length", seconds(inspection.duration_s)],
-      ["source rate", `${(inspection.source_sample_rate / 1000).toFixed(1)} kHz`],
+      ["length", seconds(durationS)],
+      ["source rate", `${(sourceRate / 1000).toFixed(1)} kHz`],
       ["clips kept", `${kept.length} of ${clips.length}`],
       ["speech kept", seconds(keptSeconds)],
-      ["decoded + scored", `${elapsedMs.toFixed(0)} ms`],
+      ["decoded + scored", elapsedMs === undefined ? "…" : `${elapsedMs.toFixed(0)} ms`],
     ];
     ui.stats.replaceChildren(
       ...values.map(([term, value]) =>
@@ -97,23 +97,38 @@ export async function mountDemo(root) {
     );
   };
 
-  const render = () => {
-    if (!current) return;
-    const clips = current.inspection.clips(policy);
-    const durationS = current.inspection.duration_s;
-    drawWaveform(ui.canvas, { envelope: current.envelope, durationS, clips });
-    renderOverlay(clips, durationS);
-    renderRows(clips);
-    renderStats(clips);
-    setStatus(clips.length ? "Click a clip to hear it." : "No speech long enough to make a clip.");
+  const viewOf = ({ inspection, name, elapsedMs, envelope }) => ({
+    name,
+    elapsedMs,
+    envelope,
+    durationS: inspection.duration_s,
+    sourceRate: inspection.source_sample_rate,
+    clips: inspection.clips(policy),
+  });
+
+  let view = {
+    name: snapshot.sample,
+    envelope: snapshot.envelope,
+    durationS: snapshot.duration_s,
+    sourceRate: snapshot.source_sample_rate,
+    clips: snapshot.clips,
   };
+
+  const render = () => {
+    if (current) view = viewOf(current);
+    drawWaveform(ui.canvas, view);
+    renderOverlay(view.clips, view.durationS);
+    renderRows(view.clips);
+    renderStats(view);
+  };
+
+  const ready = () => setStatus(view.clips.length ? "Click a clip to hear it." : "No speech long enough to make a clip.");
 
   let latest = 0;
 
   const run = async (name, readBytes) => {
     const request = ++latest;
     setStatus(`Decoding ${name}…`);
-    root.classList.toggle("is-loading", !current);
     try {
       const { inspection, elapsedMs } = await inspect(await readBytes(), extensionOf(name));
       if (request !== latest) {
@@ -124,10 +139,9 @@ export async function mountDemo(root) {
       current = { inspection, name, elapsedMs, envelope: inspection.envelope(ENVELOPE_POINTS) };
       player.load(inspection.samples(), inspection.sample_rate);
       render();
+      ready();
     } catch (error) {
       if (request === latest) setStatus(`Could not read ${name}: ${error.message ?? error}`, true);
-    } finally {
-      if (request === latest) root.classList.remove("is-loading");
     }
   };
 
@@ -166,6 +180,5 @@ export async function mountDemo(root) {
   });
   find("[data-reset]").addEventListener("click", reset);
   new ResizeObserver(render).observe(ui.canvas);
-
-  await loadSample(ui.samples[0]);
+  await loadSample(ui.samples.find((button) => button.dataset.sample === snapshot.sample));
 }

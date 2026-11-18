@@ -6,10 +6,10 @@ The landing page, proof and docs at [aerosieve.kunalrc.xyz](https://aerosieve.ku
 | :--- | :--- |
 | `src/pages/` | `index.astro`, `proof.astro`, and the docs as Markdown under `docs/` |
 | `src/components/` | Shared layout pieces, plus one folder per page: `home/`, `proof/` |
-| `src/scripts/` | One module per job: `engine` loads WebAssembly, `demo` drives the live demo, `results` renders SieveBench, `waveform` and `snr-chart` draw |
-| `src/data/site.js` | Links and navigation used across pages |
+| `src/scripts/` | One module per job: `engine` loads WebAssembly, `demo` drives the live demo, `results` switches the SieveBench chart, `waveform` and `snr-chart` draw, `dither` generates the background pattern (drawn by `dither-worker` off the main thread) |
+| `src/data/` | `site.js` for links and navigation, `sievebench.js` for the totals computed from the reports at build time |
 | `public/pkg/` | WebAssembly build of `bindings/wasm`, committed so the site builds without Rust |
-| `public/data/` | `hero.json` for the hero card and the SieveBench reports |
+| `public/data/` | `hero.json` for the hero card and the demo's first render, and the SieveBench reports |
 | `public/samples/` | Demo recordings: LibriSpeech utterances (CC BY 4.0) with noise, clipping and a dial tone added |
 
 ## Build and run
@@ -28,5 +28,7 @@ cargo install wasm-bindgen-cli --version 0.2.130
 bindings/wasm/build.sh             # writes site/public/pkg
 node site/scripts/hero-data.mjs    # writes site/public/data/hero.json
 ```
+
+`node site/scripts/dither.mjs` regenerates the static background tiles in `public/assets/` from the same pattern the animated canvas draws.
 
 SieveBench reports in `public/data/` come from `crates/aerosieve-sievebench/scripts/run_all.sh`.

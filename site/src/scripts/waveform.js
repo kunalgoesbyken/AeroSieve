@@ -1,5 +1,7 @@
 import { verdictOf } from "./verdicts.js";
 
+export const ENVELOPE_POINTS = 160;
+
 const BAR_GAP = 0.35;
 
 const toneColor = (style, tone) => style.getPropertyValue(`--tone-${tone}`).trim();
@@ -14,7 +16,7 @@ const fitToDisplay = (canvas) => {
   return { context, width, height };
 };
 
-const clipAtTime = (clips, timeS) =>
+export const clipAtTime = (clips, timeS) =>
   clips.find((clip) => timeS >= clip.start_s && timeS < clip.start_s + clip.duration_s);
 
 export function drawWaveform(canvas, { envelope, durationS, clips }) {

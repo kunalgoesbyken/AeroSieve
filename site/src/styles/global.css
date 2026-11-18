@@ -1,6 +1,34 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial");
+  font-weight: 100 349;
+  size-adjust: 100.87%;
+  ascent-override: 100.13%;
+  descent-override: 29.74%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial");
+  font-weight: 350 499;
+  size-adjust: 102.47%;
+  ascent-override: 98.56%;
+  descent-override: 29.28%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  font-weight: 500 900;
+  size-adjust: 99.34%;
+  ascent-override: 101.67%;
+  descent-override: 30.2%;
+  line-gap-override: 0%;
+}
+
 :root {
   --canvas: #fafafa;
   --surface: #ffffff;
@@ -29,7 +57,7 @@
   --series-2: #2f6fde;
   --series-3: #c0368c;
 
-  --sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --sans: "Geist Variable", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --frame: 1224px;
   --gutter: clamp(16px, 4vw, 48px);
@@ -104,9 +132,10 @@ code, pre, kbd { font-family: var(--mono); font-size: 0.9em; }
   text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease), transform 0.1s var(--ease);
 }
 .button:hover { background: var(--brand); border-color: var(--brand); }
+:is(.button, .command, .chip):active { transform: translateY(1px); }
 .button.is-outline { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
 .button.is-outline:hover { border-color: var(--ink); background: var(--surface); }
 

@@ -1,0 +1,20 @@
+---
+import { DITHER_SEEDS } from "../scripts/dither.js";
+---
+
+<canvas class="dither-live" data-dither data-seed={DITHER_SEEDS.light} aria-hidden="true"></canvas>
+
+<style>
+  .dither-live {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    color: var(--line-strong);
+    background: var(--canvas);
+    image-rendering: pixelated;
+    opacity: 0;
+  }
+  .dither-live:global(.is-live) { opacity: 1; }
+</style>

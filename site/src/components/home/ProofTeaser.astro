@@ -1,9 +1,10 @@
 ---
 import Section from "../Section.astro";
+import { count, REPORTS, TOTALS } from "../../data/sievebench.js";
 
 const NUMBERS = [
   { value: "+8.9 pts", text: "higher Whisper error rate on the clips it rejects, on 2,917 real Hindi phone recordings" },
-  { value: "24,385", text: "of 24,409 injected defects caught across six languages, with the right reason named for all but 2" },
+  { value: count(TOTALS.caught), text: `of ${count(TOTALS.expected)} injected defects caught across ${REPORTS.length} languages, with the right reason named for all but ${TOTALS.misnamed}` },
   { value: "940×", text: "faster than real time: 43 minutes of 48 kHz audio curated in 2.75 s on a laptop CPU" },
 ];
 ---

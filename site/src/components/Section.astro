@@ -1,4 +1,6 @@
 ---
+import Dither from "./Dither.astro";
+
 interface Props {
   id?: string;
   tone?: "canvas" | "surface" | "sunken" | "dither";
@@ -6,9 +8,11 @@ interface Props {
 }
 
 const { id, tone = "canvas", cross = false } = Astro.props;
+const dither = tone === "dither";
 ---
 
-<section id={id} class:list={["band", `tone-${tone}`, { "dither": tone === "dither" }]}>
+<section id={id} class:list={["band", `tone-${tone}`, { dither }]}>
+  {dither && <Dither />}
   <div class="frame band-inner">
     {cross && (
       <>
@@ -21,7 +25,7 @@ const { id, tone = "canvas", cross = false } = Astro.props;
 </section>
 
 <style>
-  .band { border-top: 1px solid var(--line); overflow-x: clip; }
+  .band { position: relative; isolation: isolate; border-top: 1px solid var(--line); overflow-x: clip; }
   .tone-canvas { background: var(--canvas); }
   .tone-surface { background: var(--surface); }
   .tone-sunken { background: var(--sunken); }

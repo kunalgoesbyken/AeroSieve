@@ -1,9 +1,5 @@
-const fetchOk = async (url) => {
+export const fetchBytes = async (url) => {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-  return response;
+  return response.arrayBuffer();
 };
-
-export const fetchJson = async (url) => (await fetchOk(url)).json();
-
-export const fetchBytes = async (url) => (await fetchOk(url)).arrayBuffer();

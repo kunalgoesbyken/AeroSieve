@@ -1,19 +1,15 @@
+import { element } from "./dom.js";
+
 const CONFIRM_MS = 1600;
+
+const copyLabels = () => [element("span", { className: "copy", text: "Copy" }), element("span", { className: "copied", text: "Copied" })];
 
 export function addCodeCopyButtons(root) {
   root.querySelectorAll("[data-code-copy] pre").forEach((pre) => {
-    const block = document.createElement("div");
-    const bar = document.createElement("div");
-    const button = document.createElement("button");
-    block.className = "code-block";
-    bar.className = "code-bar";
-    button.type = "button";
-    button.className = "copy-command";
-    button.dataset.copy = pre.textContent.trimEnd();
-    button.innerHTML = '<span class="copy">Copy</span><span class="copied">Copied</span>';
+    const button = element("button", { type: "button", className: "copy-command", "data-copy": pre.textContent.trimEnd() }, copyLabels());
+    const block = element("div", { className: "code-block" }, [element("div", { className: "code-bar" }, [button])]);
     pre.replaceWith(block);
-    bar.append(button);
-    block.append(bar, pre);
+    block.append(pre);
   });
 }
 

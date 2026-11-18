@@ -13,12 +13,13 @@
   background: var(--surface);
   font: 12px/1.2 var(--mono);
   white-space: nowrap;
-  opacity: 0;
-  animation: settle 0.7s var(--ease) forwards;
+  animation: settle 0.7s var(--ease) backwards;
   animation-delay: calc(0.2s + var(--order) * 0.1s);
+  transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
 .pill::before { content: ""; width: 7px; height: 7px; background: var(--tone-color); }
 .pill.tone-accept { border-color: var(--accent-soft); background: var(--accent-faint); }
+.pill.is-current { border-color: var(--tone-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone-color) 14%, transparent); }
 .pill-time { color: var(--muted); }
 .pill-label { font-weight: 500; }
 .pill-detail { color: var(--muted); }

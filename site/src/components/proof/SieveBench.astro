@@ -2,6 +2,7 @@
 import Section from "../Section.astro";
 import Cells from "./Cells.astro";
 import Head from "./Head.astro";
+import { count, keptShare, REPORTS, rightReasonShare, TOTALS } from "../../data/sievebench.js";
 
 const DEFECTS = [
   "White, pink and babble noise at six levels",
@@ -13,14 +14,28 @@ const DEFECTS = [
 
 const HEADERS = ["Language", "Audio", "Untouched audio kept", "Over a phone line", "Defects caught", "Named the right defect"];
 
+const percent = (value: number) => `${Math.round(value * 100)}%`;
+const precisePercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+const ROWS = REPORTS.map((report) => ({
+  corpus: report.corpus,
+  source: report.source,
+  minutes: Math.round(report.hours * 60),
+  bars: [keptShare(report, "clean"), keptShare(report, "phone_line")],
+  recall: precisePercent(report.overall.recall),
+  rightReason: precisePercent(rightReasonShare(report)),
+}));
+
+const ESTIMATES = REPORTS.map(({ corpus, snr_estimates }) => ({ corpus, snr_estimates }));
+
 const NOTES = [
   "WADA-SNR lands within about 1.3 dB of the injected level for white and pink noise from 0 to 20 dB. Babble reads up to 2.7 dB cleaner than it is, because it looks like speech. Above 20 dB the curves flatten at the recordings' own noise floor.",
   "FLEURS volunteers recorded on their own devices, so some untouched clips really are noisy. Most of what Hindi, Tamil and Bengali lose is already under the 10 dB floor.",
-  "105 damaged recordings never became a clip and are counted neither way.",
+  `${count(TOTALS.unsegmented)} damaged recordings never became a clip and are counted neither way.`,
 ];
 ---
 
-<div class="bench" data-results>
+<div class="bench" data-results={JSON.stringify(ESTIMATES)}>
   <Section id="sievebench" cross>
     <Head label="SieveBench" title="We damaged clean speech on purpose">
       SieveBench injects known defects into real recordings and runs every damaged copy through the same code as the CLI. If AeroSieve works, each one is rejected and the untouched audio is kept.
@@ -28,9 +43,9 @@ const NOTES = [
     <Cells cols={2}>
       <div class="total">
         <p class="label">Rejected when they should be</p>
-        <p class="metric is-hero"><span data-bench-caught>24,385</span><span class="of"> of <span data-bench-expected>24,409</span></span></p>
+        <p class="metric is-hero">{count(TOTALS.caught)}<span class="of"> of {count(TOTALS.expected)}</span></p>
         <p>
-          Damaged clips that should be rejected were, from <span data-bench-clips>51,352</span> damaged copies of <span data-bench-recordings>1,834</span> recordings in six languages. All but 2 named the injected defect.
+          Damaged clips that should be rejected were, from {count(TOTALS.clips)} test copies of {count(TOTALS.recordings)} recordings in {REPORTS.length} languages. All but {TOTALS.misnamed} named the injected defect.
         </p>
       </div>
       <div class="defects">
@@ -47,7 +62,17 @@ const NOTES = [
             <thead>
               <tr>{HEADERS.map((header) => <th>{header}</th>)}</tr>
             </thead>
-            <tbody data-languages></tbody>
+            <tbody>
+              {ROWS.map(({ corpus, source, minutes, bars, recall, rightReason }) => (
+                <tr>
+                  <td><strong>{corpus}</strong><span class="source">{source}</span></td>
+                  <td>{minutes} min</td>
+                  {bars.map((value) => <td><span class="bar" style={`--v: ${value.toFixed(3)}`}></span>{percent(value)}</td>)}
+                  <td class="strong">{recall}</td>
+                  <td>{rightReason}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       </div>
@@ -56,7 +81,11 @@ const NOTES = [
       <div class="chart">
         <h3>How close is the noise estimate?</h3>
         <p class="fine">Median WADA-SNR reading against the noise level actually injected. Hover a point for the spread.</p>
-        <div class="switch" data-snr-switch role="group" aria-label="Corpus"></div>
+        <div class="switch" role="group" aria-label="Corpus">
+          {REPORTS.map(({ corpus }, index) => (
+            <button type="button" class="chip" data-snr-corpus={index} aria-pressed={String(index === 0)}>{corpus}</button>
+          ))}
+        </div>
         <figure class="snr-chart" data-snr>
           <div data-chart></div>
           <p class="chart-tip" data-chart-tip hidden></p>

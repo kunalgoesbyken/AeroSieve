@@ -1,11 +1,13 @@
 ---
+import { count, TOTALS } from "../../data/sievebench.js";
+
 const SOURCES = [
   { name: "Gram Vaani", note: "Hindi phone speech" },
   { name: "Whisper-large-v3", note: "recognizer" },
   { name: "MMS-1B", note: "recognizer" },
   { name: "LibriSpeech", note: "English" },
   { name: "FLEURS", note: "5 Indian languages" },
-  { name: "51,352", note: "damaged recordings" },
+  { name: count(TOTALS.clips), note: "test recordings" },
 ];
 ---
 

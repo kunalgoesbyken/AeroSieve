@@ -7,7 +7,7 @@ import Head from "./Head.astro";
 const RUNS = [
   {
     title: "SieveBench",
-    note: "Downloads public speech corpora (CC BY 4.0), runs the benchmark and rewrites every report in site/data.",
+    note: "Downloads public speech corpora (CC BY 4.0), runs the benchmark and rewrites every report in site/public/data.",
     lines: ["crates/aerosieve-sievebench/scripts/run_all.sh"],
   },
   {
@@ -34,7 +34,7 @@ const RUNS = [
     lines: [
       "cargo build --release -p aerosieve-serve --bins",
       "./target/release/aerosieve-serve --max-sessions 2048 &",
-      "./target/release/aerosieve-loadgen site/samples/mixed.ogg --streams 1000 --ramp-s 10",
+      "./target/release/aerosieve-loadgen site/public/samples/mixed.ogg --streams 1000 --ramp-s 10",
     ],
   },
 ];

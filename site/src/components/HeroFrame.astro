@@ -1,4 +1,9 @@
+---
+import Dither from "./Dither.astro";
+---
+
 <section class="hero dither">
+  <Dither />
   <div class="frame hero-frame">
     <div class="hero-box">
       <span class="mark top-start" aria-hidden="true"></span>
@@ -11,7 +16,7 @@
 </section>
 
 <style>
-  .hero { overflow-x: clip; border-bottom: 1px solid var(--line); }
+  .hero { position: relative; isolation: isolate; overflow-x: clip; border-bottom: 1px solid var(--line); }
   .hero-frame { padding-block: 80px; }
   .hero-box { position: relative; background: var(--canvas); }
   .hero-box::before,
