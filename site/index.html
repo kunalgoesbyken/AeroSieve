@@ -241,9 +241,27 @@
                 <p>A 100 ms pause ended a clip, so natural speech broke into fragments under 3 s and was dropped: 23 of 73 clean English recordings produced nothing.</p>
                 <p class="before-after"><span>Same 43 min of Hindi</span><b>16.4 → 25.6 min</b><span>of usable speech, +56%</span></p>
               </li>
+              <li>
+                <h4>Phone audio read as a tone</h4>
+                <p>Found on real phone recordings, not the benchmark. Low-bitrate codecs cut speech off near 3 kHz, and the empty top of the flatness band made 38% of 8 kHz clips look tonal. Band edges the recording doesn't carry are now left out.</p>
+                <p class="before-after"><span>Gram Vaani phone audio</span><b>75% → 93%</b><span>kept, every SieveBench score unchanged</span></p>
+              </li>
             </ol>
           </article>
         </div>
+
+        <article class="result result-real" data-reveal>
+          <h3>Then we checked it against real recognizers</h3>
+          <p>SieveBench only shows AeroSieve catches the damage we injected. So we asked a harder question: are the clips it rejects actually worse for a model? 2,917 utterances of Gram Vaani Hindi, spontaneous speech recorded over phones, with transcripts checked twice by humans. AeroSieve judged each one whole, and two unrelated recognizers transcribed all of them with no fine-tuning.</p>
+          <dl class="mini-stats">
+            <div><dt>Whisper-large-v3 error rate, kept → rejected</dt><dd>55.7% → 64.6%</dd></div>
+            <div><dt>MMS-1B error rate, kept → rejected</dt><dd>52.0% → 60.6%</dd></div>
+            <div><dt>Whisper gap, 95% confidence interval</dt><dd>+2.2 to +16.9</dd></div>
+            <div><dt>Gap within 8 kHz phone audio, Whisper / MMS</dt><dd>+7.6 / +6.6</dd></div>
+          </dl>
+          <p class="note">Rejected audio is harder for both models, even comparing phone recordings only. The signal comes from the tonality check. The noise floor did not help here: what it rejected were clips with background music that both models handled fine. Whether training on the kept audio gives a better model is still untested.</p>
+          <a class="text-link" href="https://github.com/kunalgoesbyken/AeroSieve/tree/master/experiments/asr-hi">Scripts, full tables and the training plan<span class="nudge" aria-hidden="true">→</span></a>
+        </article>
 
         <article class="result result-speed" data-reveal>
           <h3>Speed</h3>
@@ -257,7 +275,7 @@
             <div><dt>Verdict latency, 1,000 live streams (p95)</dt><dd>14.8 ms</dd></div>
           </dl>
         </article>
-        <p class="fine reproduce">Every number in this section is reproduced by <code>crates/aerosieve-sievebench/scripts/run_all.sh</code>.</p>
+        <p class="fine reproduce">SieveBench numbers are reproduced by <code>crates/aerosieve-sievebench/scripts/run_all.sh</code>, the real-speech check by <code>experiments/asr-hi</code>.</p>
       </div>
     </section>
 
@@ -302,6 +320,7 @@ import aerosieve
 for clip in aerosieve.inspect("recording.wav")["clips"]:
     print(clip["start_s"], clip["duration_s"], clip["verdict"])
 
+verdict = aerosieve.inspect("utterance.wav", whole=True)["clips"][0]["verdict"]
 stats = aerosieve.curate(["a.wav", "b.mp3"], "data/run-1")</code></pre>
           <pre id="tab-rust" role="tabpanel" hidden><code>use aerosieve::{Pipeline, PipelineConfig};
 
@@ -330,10 +349,12 @@ println!("kept {:.1}%", stats.retention_rate() * 100.0);</code></pre>
           <h2 class="large">What it doesn't do yet.</h2>
         </div>
         <div class="limits">
-          <p>The thresholds have been checked on a few hours of audio, not against human ratings. FLEURS has no noise labels, so the tables above show what the filter does, not whether each rejection is right.</p>
+          <p>Rejected real audio is harder to recognize, but nobody has yet trained a model on the kept audio and shown it does better. That training run is planned, not done.</p>
           <ul>
+            <li>On real phone speech, the noise floor rejected music-bed recordings that recognizers handled well. Check what it removes from your data.</li>
+            <li>It barely agrees with human "inaudible" labels: 8% of those clips rejected, against 6% of unlabeled ones.</li>
             <li>A single sustained instrument can pass as speech.</li>
-            <li>One transcript per file is copied to every clip. Transcripts aren't aligned to clips.</li>
+            <li>When curating, one transcript per file is copied to every clip. For audio already cut per utterance, score it whole with <code>whole=True</code>.</li>
             <li>Speech is found by signal level unless you build with Silero VAD.</li>
           </ul>
           <a class="text-link" href="https://github.com/kunalgoesbyken/AeroSieve#limitations">Read the full list<span class="nudge" aria-hidden="true">→</span></a>

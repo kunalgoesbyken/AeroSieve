@@ -478,6 +478,8 @@ a:hover > .nudge { transform: translateX(4px); }
 .result { padding-top: 22px; border-top: 1px solid var(--ink); }
 .result h3 { font-size: 18px; }
 .result > .fine { margin-top: 6px; }
+.result-real { margin-bottom: 56px; }
+.result-real > p:first-of-type { max-width: 68ch; margin-top: 10px; color: var(--ink-soft); }
 .result-speed { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr; gap: 6px 32px; align-items: baseline; }
 .result-speed h3 { grid-column: 1 / -1; }
 .result-speed .big-number { grid-row: span 3; font: 450 72px/1 var(--sans); letter-spacing: -0.04em; color: var(--brand); }
