@@ -74,6 +74,7 @@ fn inspect_file(
     policy: FilterPolicy,
     max_duration_s: Option<f32>,
     envelope_points: Option<usize>,
+    whole: bool,
 ) -> Result<Inspection, PipelineError> {
     let decode = DecodeConfig {
         max_duration_s,
@@ -82,7 +83,12 @@ fn inspect_file(
     let audio = decode_file(path, &decode)?;
     let mut inspector = Inspector::new(decode, SegmentConfig::default(), policy)?;
 
-    let mut inspection = Inspection::from(inspector.inspect_audio(path, &audio)?);
+    let outcome = if whole {
+        inspector.score_whole(path, &audio)?
+    } else {
+        inspector.inspect_audio(path, &audio)?
+    };
+    let mut inspection = Inspection::from(outcome);
     inspection.envelope = envelope_points.map(|points| Envelope::of(&audio, points));
     Ok(inspection)
 }
@@ -105,18 +111,21 @@ fn curate_files(
 /// `max_duration_s` refuses longer recordings while decoding, which matters
 /// when the file comes from an untrusted upload. `envelope_points` adds an
 /// `envelope` of about that many peak values for drawing a waveform.
+/// `whole=True` scores the recording as one clip without segmenting it, for
+/// corpora already cut and transcribed per utterance.
 #[pyfunction]
-#[pyo3(signature = (path, policy=None, *, max_duration_s=None, envelope_points=None))]
+#[pyo3(signature = (path, policy=None, *, max_duration_s=None, envelope_points=None, whole=false))]
 fn inspect<'py>(
     py: Python<'py>,
     path: PathBuf,
     policy: Option<&Bound<'py, PyAny>>,
     max_duration_s: Option<f32>,
     envelope_points: Option<usize>,
+    whole: bool,
 ) -> PyResult<Bound<'py, PyAny>> {
     let policy = policy_from(policy)?;
     let inspection = py
-        .detach(|| inspect_file(&path, policy, max_duration_s, envelope_points))
+        .detach(|| inspect_file(&path, policy, max_duration_s, envelope_points, whole))
         .map_err(runtime_error)?;
     Ok(pythonize(py, &inspection)?)
 }

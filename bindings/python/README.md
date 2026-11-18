@@ -40,6 +40,15 @@ result = aerosieve.inspect("upload.mp3", max_duration_s=600, envelope_points=200
 
 `max_duration_s` refuses longer recordings while they are being decoded. `envelope_points` adds `result["envelope"]`, about that many peak values spaced `step_s` seconds apart, for drawing a waveform.
 
+For a corpus already cut and transcribed per utterance, score each file as one clip so it stays matched to its transcript:
+
+```python
+clip = aerosieve.inspect("utt-0001.flac", whole=True)["clips"][0]
+keep = clip["verdict"] == "accept"
+```
+
+Without `whole=True` the recording is re-segmented, and an utterance shorter than 3 s produces no clip at all. With it there is always exactly one clip, and digital silence comes back as `silence`.
+
 ## Curate a set of recordings
 
 ```python

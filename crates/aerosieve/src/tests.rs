@@ -172,9 +172,8 @@ fn files_at_any_source_rate_are_resampled_and_accepted() {
     }
 }
 
-#[test]
-fn clipping_is_detected_after_normalization_turns_a_hot_file_down() {
-    let workspace = Workspace::new();
+/// A 16-bit recording of [`recording`] driven 25 dB into the rails.
+fn hot_file(workspace: &Workspace) -> PathBuf {
     let path = workspace.root.path().join("hot.wav");
     let spec = hound::WavSpec {
         channels: 1,
@@ -188,6 +187,13 @@ fn clipping_is_detected_after_normalization_turns_a_hot_file_down() {
             .unwrap();
     }
     wav.finalize().unwrap();
+    path
+}
+
+#[test]
+fn clipping_is_detected_after_normalization_turns_a_hot_file_down() {
+    let workspace = Workspace::new();
+    let path = hot_file(&workspace);
 
     let mut pipeline = Pipeline::new(workspace.config()).unwrap();
     let outcome = pipeline.process_file(&path, None).unwrap();
@@ -198,6 +204,101 @@ fn clipping_is_detected_after_normalization_turns_a_hot_file_down() {
         "the file should be turned down"
     );
     assert_eq!(outcome.segments[0].rejected, Some(RejectReason::Clipping));
+}
+
+fn inspector() -> Inspector {
+    Inspector::new(
+        DecodeConfig::default(),
+        SegmentConfig::default(),
+        FilterPolicy::default(),
+    )
+    .unwrap()
+}
+
+fn verdicts(outcome: &FileOutcome) -> Vec<Option<RejectReason>> {
+    outcome.segments.iter().map(|clip| clip.rejected).collect()
+}
+
+#[test]
+fn whole_scoring_judges_the_entire_buffer_as_one_clip() {
+    let audio = recording();
+
+    let outcome = inspector()
+        .score_whole(Path::new("take.wav"), &audio)
+        .unwrap();
+
+    assert_eq!(verdicts(&outcome), [None]);
+    assert_eq!(
+        outcome.segments[0].segment,
+        Segment {
+            start_sample: 0,
+            end_sample: audio.samples.len()
+        }
+    );
+    assert_eq!(outcome.path, Path::new("take.wav"));
+    assert_eq!(outcome.sample_rate, SAMPLE_RATE);
+}
+
+#[test]
+fn whole_scoring_keeps_utterances_shorter_than_the_segmenter_minimum() {
+    let short = DecodedAudio::from_samples(glottal_speech(samples(2.0)), SAMPLE_RATE);
+    let mut inspector = inspector();
+
+    let segmented = inspector
+        .inspect_audio(Path::new("short.wav"), &short)
+        .unwrap();
+    let whole = inspector
+        .score_whole(Path::new("short.wav"), &short)
+        .unwrap();
+
+    assert!(segmented.segments.is_empty());
+    assert_eq!(verdicts(&whole), [None]);
+}
+
+#[test]
+fn whole_scoring_reports_silence_and_empty_audio_as_silence() {
+    for audio in [
+        DecodedAudio::from_samples(silence(samples(2.0)), SAMPLE_RATE),
+        DecodedAudio::from_samples(Vec::new(), SAMPLE_RATE),
+    ] {
+        let outcome = inspector()
+            .score_whole(Path::new("quiet.wav"), &audio)
+            .unwrap();
+
+        assert_eq!(verdicts(&outcome), [Some(RejectReason::Silence)]);
+    }
+}
+
+#[test]
+fn whole_scoring_measures_clipping_against_the_source_full_scale() {
+    let workspace = Workspace::new();
+    let audio =
+        aerosieve_decode::decode_file(&hot_file(&workspace), &DecodeConfig::default()).unwrap();
+
+    let outcome = inspector()
+        .score_whole(Path::new("hot.wav"), &audio)
+        .unwrap();
+
+    assert!(
+        outcome.applied_gain_db < 0.0,
+        "the file should be turned down"
+    );
+    assert_eq!(verdicts(&outcome), [Some(RejectReason::Clipping)]);
+}
+
+#[test]
+fn whole_scoring_refuses_audio_at_the_wrong_sample_rate() {
+    let audio = DecodedAudio::from_samples(glottal_speech(8_000), 8_000);
+
+    let result = inspector().score_whole(Path::new("narrowband.wav"), &audio);
+
+    assert!(matches!(
+        result,
+        Err(PipelineError::SampleRateMismatch {
+            audio: 8_000,
+            segmenter: SAMPLE_RATE
+        })
+    ));
 }
 
 #[test]

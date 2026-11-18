@@ -293,14 +293,36 @@ impl<D: SpeechDetector> Inspector<D> {
             })
             .collect();
 
-        Ok(FileOutcome {
-            path: source.to_path_buf(),
-            duration_s: audio.duration_s(),
-            sample_rate: audio.sample_rate,
-            source_sample_rate: audio.source_sample_rate,
-            applied_gain_db: audio.applied_gain_db,
-            segments,
-        })
+        Ok(outcome_of(source, audio, segments))
+    }
+
+    /// Score audio that is already one utterance, as a single clip, without
+    /// segmenting it.
+    ///
+    /// For corpora cut and transcribed per utterance, where re-segmenting
+    /// would separate audio from its transcript and drop anything under the
+    /// segmenter's minimum length. Pauses and edge silence count towards the
+    /// metrics, and digital silence or an empty buffer is reported as
+    /// [`RejectReason::Silence`] rather than producing no clip.
+    pub fn score_whole(
+        &self,
+        source: &Path,
+        audio: &DecodedAudio,
+    ) -> Result<FileOutcome, PipelineError> {
+        ensure_matching_rates(audio.sample_rate, self.segmenter.config())?;
+
+        let whole = Segment {
+            start_sample: 0,
+            end_sample: audio.samples.len(),
+        };
+        let clip = judge(
+            &self.policy,
+            whole,
+            &audio.samples,
+            audio.sample_rate,
+            audio.full_scale(),
+        );
+        Ok(outcome_of(source, audio, vec![clip]))
     }
 
     /// A [`LiveInspector`] with this configuration, for audio that arrives
@@ -497,6 +519,17 @@ fn judge(
         segment,
         metrics,
         rejected: policy.evaluate(&metrics),
+    }
+}
+
+fn outcome_of(source: &Path, audio: &DecodedAudio, segments: Vec<SegmentOutcome>) -> FileOutcome {
+    FileOutcome {
+        path: source.to_path_buf(),
+        duration_s: audio.duration_s(),
+        sample_rate: audio.sample_rate,
+        source_sample_rate: audio.source_sample_rate,
+        applied_gain_db: audio.applied_gain_db,
+        segments,
     }
 }
 
