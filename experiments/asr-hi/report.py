@@ -9,19 +9,21 @@ import jiwer
 import numpy as np
 from indicnlp.normalize.indic_normalize import IndicNormalizerFactory
 
-HINDI = IndicNormalizerFactory().get_normalizer("hi")
 TAG = re.compile(r"<[^>]*>")
-DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
-DANDA = str.maketrans({"।": " ", "॥": " "})
 MAX_WHISPER_S = 30.0
 RESAMPLES = 10_000
 
 
-def normalize(text: str) -> str:
-    text = HINDI.normalize(unicodedata.normalize("NFC", TAG.sub(" ", text)))
-    text = text.translate(DIGITS).translate(DANDA)
-    text = "".join(" " if unicodedata.category(char).startswith("P") else char for char in text)
-    return " ".join(text.lower().split())
+def normalized_char(char: str) -> str:
+    if unicodedata.category(char).startswith("P"):
+        return " "
+    digit = unicodedata.decimal(char, None)
+    return char if digit is None else str(digit)
+
+
+def normalize(text: str, script) -> str:
+    text = script.normalize(unicodedata.normalize("NFC", TAG.sub(" ", text)))
+    return " ".join("".join(map(normalized_char, text)).lower().split())
 
 
 def read_jsonl(path: Path) -> list[dict]:
@@ -53,9 +55,12 @@ def bootstrap_gap(worse: list[dict], better: list[dict], rng: np.random.Generato
     return float(point), float(low), float(high)
 
 
+def ranks(values: list[float]) -> np.ndarray:
+    return np.argsort(np.argsort(np.array(values))).astype(float)
+
+
 def spearman(x: list[float], y: list[float]) -> float:
-    rank = lambda values: np.argsort(np.argsort(values)).astype(float)
-    return float(np.corrcoef(rank(np.array(x)), rank(np.array(y)))[0, 1])
+    return float(np.corrcoef(ranks(x), ranks(y))[0, 1])
 
 
 def channel(row: dict) -> str:
@@ -125,6 +130,7 @@ def model_section(name: str, rows: list[dict], verdict_keys: dict[str, str], rng
 def main() -> None:
     parser = argparse.ArgumentParser(description="Relate AeroSieve verdicts to ASR errors on Gram Vaani.")
     parser.add_argument("--data", type=Path, required=True)
+    parser.add_argument("--language", required=True, help="ISO 639-1 code understood by indic-nlp, e.g. hi, ta, bn")
     parser.add_argument("--hyps", type=Path, nargs="+", required=True)
     parser.add_argument("--baseline-scores", type=Path)
     parser.add_argument("--out", type=Path, required=True)
@@ -135,6 +141,7 @@ def main() -> None:
     baseline = {row["id"]: row["verdict"] for row in read_jsonl(args.baseline_scores)} if args.baseline_scores else {}
     verdict_keys = {"current": "verdict", **({"v0.4.0": "baseline_verdict"} if baseline else {})}
 
+    script = IndicNormalizerFactory().get_normalizer(args.language)
     rng = np.random.default_rng(0)
     sections, summaries = [], {}
     for hyps_path in args.hyps:
@@ -143,10 +150,10 @@ def main() -> None:
         rows = []
         for hyp in hyps:
             row = {**manifest[hyp["id"]], **scores[hyp["id"]], "baseline_verdict": baseline.get(hyp["id"])}
-            reference = normalize(row["text"])
+            reference = normalize(row["text"], script)
             if not reference or row["duration_s"] > MAX_WHISPER_S:
                 continue
-            row["word_err"], row["word_ref"], row["char_err"], row["char_ref"] = errors(reference, normalize(hyp["hyp"]))
+            row["word_err"], row["word_ref"], row["char_err"], row["char_ref"] = errors(reference, normalize(hyp["hyp"], script))
             rows.append(row)
         section, summaries[model] = model_section(model, rows, verdict_keys, rng)
         sections.append(section)

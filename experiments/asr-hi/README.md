@@ -43,7 +43,7 @@ uv pip install --python .venv ../../bindings/python soundfile numpy jiwer indic-
 Upload `<prepared-dir>` (audio and `manifest.jsonl`) as a private Kaggle dataset, point `kaggle/kernel-metadata.json` at it, and run `kaggle kernels push -p kaggle`. Then:
 
 ```sh
-.venv/Scripts/python report.py --data <prepared-dir> --hyps hyps_whisper.jsonl hyps_mms.jsonl --out results
+.venv/Scripts/python report.py --data <prepared-dir> --language hi --hyps hyps_whisper.jsonl hyps_mms.jsonl --out results
 ```
 
-`prepare.py` needs `ffmpeg` and `ffprobe` on the path. Building the Python binding on Windows needs the MSVC Rust toolchain.
+For another language, change the `language` codes in `kaggle/transcribe.py` and pass its code to `report.py`. `prepare.py` needs `ffmpeg` and `ffprobe` on the path. Building the Python binding on Windows needs the MSVC Rust toolchain.

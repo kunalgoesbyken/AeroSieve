@@ -10,12 +10,6 @@ import torch
 
 RATE = 16_000
 OUT = Path("/kaggle/working")
-MODELS = {
-    "whisper": {"name": "openai/whisper-large-v3", "batch": 16, "gpu": "0"},
-    "mms": {"name": "facebook/mms-1b-all", "batch": 8, "gpu": "1"},
-}
-
-
 def find_manifest() -> Path:
     return next(Path("/kaggle/input").rglob("manifest.jsonl"))
 
@@ -38,7 +32,7 @@ def batches(rows: list[dict], size: int):
         yield rows[start:start + size]
 
 
-def whisper_transcriber(name: str):
+def whisper_transcriber(name: str, language: str):
     from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
     processor = WhisperProcessor.from_pretrained(name)
@@ -46,17 +40,17 @@ def whisper_transcriber(name: str):
 
     def transcribe(audios: list) -> list[str]:
         features = processor.feature_extractor(audios, sampling_rate=RATE, return_tensors="pt").input_features
-        tokens = model.generate(features.half().cuda(), language="hi", task="transcribe", max_new_tokens=440, num_beams=1)
+        tokens = model.generate(features.half().cuda(), language=language, task="transcribe", max_new_tokens=440, num_beams=1)
         return processor.batch_decode(tokens, skip_special_tokens=True)
 
     return transcribe
 
 
-def mms_transcriber(name: str):
+def mms_transcriber(name: str, language: str):
     from transformers import AutoProcessor, Wav2Vec2ForCTC
 
-    processor = AutoProcessor.from_pretrained(name, target_lang="hin")
-    model = Wav2Vec2ForCTC.from_pretrained(name, target_lang="hin", ignore_mismatched_sizes=True, dtype=torch.float16).cuda().eval()
+    processor = AutoProcessor.from_pretrained(name, target_lang=language)
+    model = Wav2Vec2ForCTC.from_pretrained(name, target_lang=language, ignore_mismatched_sizes=True, dtype=torch.float16).cuda().eval()
 
     def transcribe(audios: list) -> list[str]:
         inputs = processor(audios, sampling_rate=RATE, return_tensors="pt", padding=True)
@@ -67,10 +61,16 @@ def mms_transcriber(name: str):
     return transcribe
 
 
+MODELS = {
+    "whisper": {"build": whisper_transcriber, "name": "openai/whisper-large-v3", "language": "hi", "batch": 16, "gpu": "0"},
+    "mms": {"build": mms_transcriber, "name": "facebook/mms-1b-all", "language": "hin", "batch": 8, "gpu": "1"},
+}
+
+
 def work(key: str) -> None:
     spec = MODELS[key]
     root, rows = load_rows()
-    transcribe = {"whisper": whisper_transcriber, "mms": mms_transcriber}[key](spec["name"])
+    transcribe = spec["build"](spec["name"], spec["language"])
     started = time.time()
     with (OUT / f"hyps_{key}.jsonl").open("w", encoding="utf-8") as handle, torch.inference_mode():
         for done, batch in enumerate(batches(rows, spec["batch"])):
